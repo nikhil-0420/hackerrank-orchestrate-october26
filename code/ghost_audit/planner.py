@@ -10,9 +10,11 @@ from dataclasses import dataclass, field
 import json
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+from ghost_audit.citation import resolve_step_citation
 from ghost_audit.evidence.coverage import CoverageIndex
 from ghost_audit.intent import is_deletion_request
 from ghost_audit.linker.graph import CaseLinkage, select_best_citable_file
+from ghost_audit.loaders.manifest import EvidenceFileMeta
 from ghost_audit.observation import Observation
 from ghost_audit.rules import RuleEngine, TreatmentDecision
 from ghost_audit.spec import (
@@ -77,6 +79,7 @@ def plan_case(
     rule_engine: RuleEngine,
     obs_by_res: Dict[str, List[Observation]],
     coverage_index: Optional[CoverageIndex] = None,
+    manifest: Optional[Dict[str, EvidenceFileMeta]] = None,
 ) -> CaseDecision:
     """
     Evaluates policy across all attributed resources for a case and constructs ordered steps.
@@ -115,16 +118,31 @@ def plan_case(
         for rid, dec in treatments.items():
             if not dec.is_compliant and dec.finding_op:
                 attr = case_linkage.attributed_resources.get(rid)
-                best_file = attr.best_citable_file_id if attr else None
-                if not best_file:
-                    best_file = select_best_citable_file(rid, obs_by_res, audit_at) or ""
+                fallback_file = attr.best_citable_file_id if attr else None
+                if not fallback_file:
+                    fallback_file = select_best_citable_file(rid, obs_by_res, audit_at) or ""
+                
+                if manifest is not None:
+                    ev_id = resolve_step_citation(
+                        resource_id=rid,
+                        system_id=dec.system_id,
+                        state=dec.finding_state,
+                        audit_at=audit_at,
+                        obs_by_res=obs_by_res,
+                        coverage_index=coverage_index,
+                        manifest=manifest,
+                        fallback_file_id=fallback_file,
+                    )
+                else:
+                    ev_id = fallback_file
+
                 findings.append({
                     "phase": PHASE_FINDING,
                     "system_id": dec.system_id,
                     "resource_id": rid,
                     "operation": dec.finding_op,
                     "state": dec.finding_state,
-                    "evidence_id": best_file,
+                    "evidence_id": ev_id,
                 })
         findings.sort(
             key=lambda s: (
@@ -234,30 +252,43 @@ def plan_case(
             attr = case_linkage.attributed_resources[rid]
             sys_id = dec.system_id if dec else attr.system_id
             
-            citable_file = attr.best_citable_file_id
-            if not citable_file and coverage_index is not None:
-                citable_file = find_latest_covering_evidence_id(sys_id, coverage_index, audit_at)
-            if not citable_file:
-                citable_file = shared_file or ""
+            fallback_file = attr.best_citable_file_id
+            if not fallback_file and coverage_index is not None:
+                fallback_file = find_latest_covering_evidence_id(sys_id, coverage_index, audit_at)
+            if not fallback_file:
+                fallback_file = shared_file or ""
 
             if dec and dec.verification_op:
-                verifications.append({
-                    "phase": PHASE_VERIFICATION,
-                    "system_id": sys_id,
-                    "resource_id": rid,
-                    "operation": dec.verification_op,
-                    "state": dec.verification_state,
-                    "evidence_id": citable_file,
-                })
+                op = dec.verification_op
+                st = dec.verification_state
             elif rid.startswith("account_"):
-                verifications.append({
-                    "phase": PHASE_VERIFICATION,
-                    "system_id": "account_service",
-                    "resource_id": rid,
-                    "operation": "VERIFY_RECORD_ABSENT",
-                    "state": "ABSENT",
-                    "evidence_id": citable_file,
-                })
+                op = "VERIFY_RECORD_ABSENT"
+                st = "ABSENT"
+            else:
+                continue
+
+            if manifest is not None:
+                ev_id = resolve_step_citation(
+                    resource_id=rid,
+                    system_id=sys_id,
+                    state=st,
+                    audit_at=audit_at,
+                    obs_by_res=obs_by_res,
+                    coverage_index=coverage_index,
+                    manifest=manifest,
+                    fallback_file_id=fallback_file,
+                )
+            else:
+                ev_id = fallback_file
+
+            verifications.append({
+                "phase": PHASE_VERIFICATION,
+                "system_id": sys_id,
+                "resource_id": rid,
+                "operation": op,
+                "state": st,
+                "evidence_id": ev_id,
+            })
 
         verifications.sort(
             key=lambda s: (

@@ -17,6 +17,7 @@ from ghost_audit.evidence.coverage import CoverageIndex
 from ghost_audit.evidence.normalizer import normalize_all_evidence
 from ghost_audit.identity import IdentityResolver
 from ghost_audit.linker import Linker
+from ghost_audit.loaders.manifest import get_manifest_by_id
 from ghost_audit.paths import DATASET_DIR
 from ghost_audit.planner import CaseDecision, plan_case
 from ghost_audit.rules import RuleEngine
@@ -46,6 +47,7 @@ def run_pipeline(
         out_path = Path(out_path)
 
     manifest_path = dataset_dir / "evidence_files.csv"
+    manifest = get_manifest_by_id(manifest_path)
     activity_path = dataset_dir / "system_activity.csv"
     identities_path = dataset_dir / "user_identities.csv"
     audit_log_path = dataset_dir / "user_audit_log.csv"
@@ -134,6 +136,7 @@ def run_pipeline(
             rule_engine=rule_engine,
             obs_by_res=obs_by_res,
             coverage_index=coverage_index,
+            manifest=manifest,
         )
         decisions.append(dec)
         status_counts[dec.deletion_status] += 1
