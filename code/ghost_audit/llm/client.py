@@ -69,15 +69,21 @@ class LLMClient:
         model: str = "gemini-2.5-flash",
         cache: Optional[LLMCache] = None,
         ledger: Optional[UsageLedger] = None,
+        no_cache: bool = False,
     ):
         _load_env_silently()
         self.provider = provider
         self.model = model
         self.cache = cache or LLMCache()
         self.ledger = ledger or UsageLedger()
+        self.no_cache = no_cache
         self.silent_failures: List[SilentFailureSignal] = []
         self.schema_validation_failures = 0
         self.total_structured_attempts = 0
+        self.fallback_count = 0
+        self.cache_reads = 0
+        self.cache_hits = 0
+        self.cache_misses = 0
 
         # Detect API key presence without ever revealing or logging it
         api_key = os.environ.get("GEMINI_API_KEY", "").strip()
@@ -94,6 +100,12 @@ class LLMClient:
                     SilentFailureSignal("INIT", "client", f"Init failure: {type(e).__name__}", time.time())
                 )
                 self._genai_client = None
+
+    @property
+    def cache_hit_rate(self) -> float:
+        if self.cache_reads == 0:
+            return 0.0
+        return self.cache_hits / self.cache_reads
 
     def log_silent_failure(self, task: str, target_id: str, reason: str) -> None:
         self.silent_failures.append(SilentFailureSignal(task, target_id, reason, time.time()))
@@ -115,27 +127,46 @@ class LLMClient:
         """
         full_prompt = f"{task_prompt}\n\nUser Input Data:\n{user_input}"
 
-        # 1. Check disk cache first
-        cached_data = self.cache.get(self.model, full_prompt, user_input)
-        if cached_data is not None:
-            try:
-                obj = schema_cls.model_validate(cached_data)
-                self.ledger.record_call(
-                    provider=self.provider,
-                    model=self.model,
-                    target_id=target_id,
-                    input_tokens=0,
-                    output_tokens=0,
-                    cache_hit=True,
-                    task=task_name,
-                    timestamp=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                )
-                return obj, True, "CACHE_HIT"
-            except ValidationError:
-                pass  # Stale or invalid cache format, re-fetch
+        # 1. Check disk cache first (unless no_cache is active)
+        if not self.no_cache:
+            self.cache_reads += 1
+            cached_data = self.cache.get(self.model, full_prompt, user_input)
+            if cached_data is not None:
+                try:
+                    obj = schema_cls.model_validate(cached_data)
+                    self.cache_hits += 1
+                    self.ledger.record_call(
+                        provider=self.provider,
+                        model=self.model,
+                        target_id=target_id,
+                        input_tokens=0,
+                        output_tokens=0,
+                        cache_hit=True,
+                        task=task_name,
+                        is_fallback=False,
+                        status="CACHE_HIT",
+                        timestamp=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                    )
+                    return obj, True, "CACHE_HIT"
+                except ValidationError:
+                    pass  # Stale or invalid cache format, re-fetch
+            self.cache_misses += 1
 
         # 2. Check if API client is active
         if not self.has_key or self._genai_client is None:
+            self.fallback_count += 1
+            self.ledger.record_call(
+                provider=self.provider,
+                model=self.model,
+                target_id=target_id,
+                input_tokens=0,
+                output_tokens=0,
+                cache_hit=False,
+                task=task_name,
+                is_fallback=True,
+                status="DETERMINISTIC_FALLBACK_NO_KEY",
+                timestamp=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            )
             fallback_val = fallback_fn()
             return fallback_val, False, "DETERMINISTIC_FALLBACK_NO_KEY"
 
@@ -177,7 +208,8 @@ class LLMClient:
                     out_tok = len(raw_text) // 4
 
                 # Record cache & ledger
-                self.cache.set(self.model, full_prompt, user_input, validated_obj.model_dump())
+                if not self.no_cache:
+                    self.cache.set(self.model, full_prompt, user_input, validated_obj.model_dump())
                 self.ledger.record_call(
                     provider=self.provider,
                     model=self.model,
@@ -186,6 +218,8 @@ class LLMClient:
                     output_tokens=out_tok,
                     cache_hit=False,
                     task=task_name,
+                    is_fallback=False,
+                    status="SUCCESS",
                     timestamp=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                 )
                 return validated_obj, True, "SUCCESS"
@@ -201,6 +235,19 @@ class LLMClient:
                 break
 
         # Fallback to deterministic code
+        self.fallback_count += 1
+        self.ledger.record_call(
+            provider=self.provider,
+            model=self.model,
+            target_id=target_id,
+            input_tokens=0,
+            output_tokens=0,
+            cache_hit=False,
+            task=task_name,
+            is_fallback=True,
+            status=f"FALLBACK_AFTER_FAILURE: {last_error}",
+            timestamp=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        )
         fallback_val = fallback_fn()
         return fallback_val, False, f"FALLBACK_AFTER_FAILURE: {last_error}"
 

@@ -52,9 +52,9 @@ def run_pipeline(
     Returns pipeline execution metrics and summary statistics.
     """
     cfg = config or {}
-    mode = cfg.get("mode", "A").upper()
+    mode = cfg.get("mode", "C").upper()
     if mode not in ("A", "B", "C"):
-        mode = "A"
+        mode = "C"
 
     dataset_dir = Path(dataset_dir)
     if requests_path is None:
@@ -79,7 +79,8 @@ def run_pipeline(
     if mode in ("B", "C"):
         provider = cfg.get("provider", "google")
         model = cfg.get("model", "gemini-2.5-flash")
-        llm_client = LLMClient(provider=provider, model=model)
+        no_cache = cfg.get("no_cache", False)
+        llm_client = LLMClient(provider=provider, model=model, no_cache=no_cache)
 
     # 1. Evidence Ingestion & Normalization
     observations, coverage_records, norm_stats = normalize_all_evidence(
@@ -274,6 +275,40 @@ def run_pipeline(
     emit_output_file(decisions, out_path, id_sort=id_sort)
 
     total_cases = len(decisions)
+
+    # 6. Generate and save usage report
+    usage_report_path = cfg.get("usage_report_path", Path("code/evaluation/usage_report.md"))
+    if usage_report_path:
+        usage_report_path = Path(usage_report_path)
+        from ghost_audit.llm.usage import UsageLedger, render_usage_report_markdown
+
+        ledger_to_report = llm_client.ledger if llm_client else UsageLedger()
+        schema_fails = llm_client.schema_validation_failures if llm_client else 0
+        fallback_cnt = llm_client.fallback_count if llm_client else 0
+        c_stats = (
+            {
+                "reads": llm_client.cache_reads,
+                "hits": llm_client.cache_hits,
+                "misses": llm_client.cache_misses,
+                "hit_rate": llm_client.cache_hit_rate,
+            }
+            if llm_client
+            else {}
+        )
+
+        report_md = render_usage_report_markdown(
+            ledger=ledger_to_report,
+            total_cases=total_cases,
+            schema_failures=schema_fails,
+            fallback_count=fallback_cnt,
+            cache_stats=c_stats,
+            mode=mode,
+            provider=cfg.get("provider", "google"),
+            model=cfg.get("model", "gemini-2.5-flash"),
+        )
+        usage_report_path.parent.mkdir(parents=True, exist_ok=True)
+        usage_report_path.write_text(report_md, encoding="utf-8")
+
     stats: Dict[str, Any] = {
         "mode": mode,
         "total_cases": total_cases,

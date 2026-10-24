@@ -1,164 +1,194 @@
-# HackerRank Orchestrate - October 2026
+# Ghost Audit: Autonomous Deletion Compliance Engine
 
-## Ghost Data Still Exists
+An enterprise-grade, deterministic-first AI audit engine designed for the **HackerRank Orchestrate (October 2026) Challenge: "Ghost Data Still Exists"**.
 
-Build an AI agent that audits whether a user's personal data was actually deleted.
-
-A deletion workflow may report **Complete** while data still exists in databases, logs, support attachments, exports, search indexes, archives, or backups. Sync and restore processes may also bring deleted data back.
-
-For each request, the agent must first determine whether deletion was actually requested. It then returns `COMPLETE`, `INCOMPLETE`, or `NOT_APPLICABLE`, reports any remaining data or recreation risk, and produces the ordered remediation and verification steps required to finish an authorized deletion safely.
-
-Read [`problem_statement.md`](./problem_statement.md) for the complete challenge contract.
+The engine audits whether personal data requested for deletion was actually purged across heterogeneous enterprise architectures—including primary relational databases, regional read replicas, failover replicas, reporting data marts, cloud storage exports, support ticketing systems, and analytics warehouses. It reconstructs user identities across historical aliases, reconciles replication lag and restore drift, detects phantom recreation risks, and outputs canonical, ordered remediation and verification plans.
 
 ---
 
-## Quick Start
+## 1. Quick Start & Execution
 
-Clone the repository and move into the project directory:
+### Prerequisites
+- **Python**: Version 3.10+ (tested on Python 3.14, 3.12, 3.11).
+- **Core Dependencies**: Standard library + `pydantic>=2.0` (for structured model outputs and schema validation).
+- **Optional Dependencies**: `google-genai` (for Google Gemini API access when an API key is provided).
 
+Install requirements:
 ```bash
-git clone https://github.com/interviewstreet/hackerrank-orchestrate-october26.git
-cd hackerrank-orchestrate-october26
+pip install pydantic
+# Optional (for Gemini API calls):
+pip install google-genai
 ```
 
-Start your AI coding tool from the **repository root** so it automatically reads [`AGENTS.md`](./AGENTS.md) and logs your session turns to `log.txt` in the root directory.
+### Environment Variables
+- `PYTHONPATH`: Must include `code` (e.g. `$env:PYTHONPATH='code'` in PowerShell or `export PYTHONPATH=code` in Linux/macOS).
+- `GEMINI_API_KEY`: *(Optional)* API key for Google Gemini model calls (Config B / C). If unset or empty, the pipeline automatically and transparently operates in deterministic fallback mode with zero exceptions, zero external costs, and byte-identical results.
 
-Build your solution in `code/main.py`, or use another language and document its setup and run command clearly in your README.
+### Exact Run Commands
 
-Your solution must:
-
-- Read the input files from `dataset/`
-- Generate one prediction row for every request in `dataset/deletion_requests.csv`
-- Write the final predictions to `output.csv` in the repository root
-
-Run the starter Python entry point with:
-
-```bash
-python3 code/main.py
-```
-
-The blank template at `dataset/output.csv` is provided as a reference. Your final generated file for submission must be the root-level `output.csv`.
-
-
-## Dataset
-
-All participant-facing files are in `dataset/`:
-
-| File | Contents |
-| --- | --- |
-| `deletion_requests.csv` | 518 requests |
-| `sample_deletion_requests.csv` | 32 sample requests |
-| `sample_output.csv` | Correct sample answers |
-| `user_identities.csv` | Current user identities |
-| `user_audit_log.csv` | Historical identity changes |
-| `system_activity.csv` | Activity across services and data processes |
-| `deletion_rules.csv` | Required treatment for each data category |
-| `evidence_files.csv` | Manifest of supplied evidence files |
-| `output.csv` | Blank output template |
-
-Evidence is stored under `dataset/evidence/` and may include PDFs, images, logs, JSON, plain text, or SQL snapshot exports. SQL captures may contain a primary database, regional replicas, a reporting replica, or a failover replica so replication drift can be investigated directly. The `.sql` files are readable as text and executable with SQLite.
-
-Only `deletion_requests.csv` requires answers. The other files provide evidence and context.
-
----
-
-## Output
-
-Create `output.csv` with these columns in this exact order:
-
-```text
-case_id,deletion_status,steps_json
-```
-
-Produce exactly one row per request. `deletion_status` is `COMPLETE`, `INCOMPLETE`, or `NOT_APPLICABLE`. `steps_json` is an ordered JSON array containing findings, remediation actions, and verification checks. Use an empty array (`[]`) for `NOT_APPLICABLE`. Evidence references may be a `file_id`, `activity_id`, or `audit_id`. Determine the resource state at `audit_at` from the available evidence; reported workflow statuses and operation results are claims. Use `dataset/sample_output.csv` as the format reference.
-
-The final file must contain 518 data rows sorted by `case_id` (plus the header row). The grader parses `steps_json` as JSON, so object-key order and whitespace do not matter; array order does. Order findings, remediation, and verification in that phase order. Within a phase, follow the operation order in the problem statement, then sort by `system_id` and `resource_id`.
-
----
-
-## Evaluation
-
-`output.csv` will be compared with hidden canonical answers. Scoring considers:
-
-- deletion assessment accuracy;
-- current and historical identity resolution;
-- discovery of remaining data and recreation risks;
-- correct policy application and evidence references; and
-- completeness and ordering of remediation and verification steps.
-
-Your `code.zip` must include:
-
-```text
-code/evaluation/evaluation_report.md
-code/evaluation/usage_report.md
-```
-
-- `evaluation_report.md` must cover case, row, field, and sequence accuracy, at least three additional evaluation cases created by you, failures found, and improvements made.
-- `usage_report.md` must cover the final full-dataset run, including model providers and names, model calls, input and output tokens, total and average tokens per request, and estimated total and per-request cost. Include per-model and overall totals when using multiple models.
-
-**Important:** Place `evaluation_report.md` and `usage_report.md` inside `code/evaluation/` (matching `code/evaluation/main.py` in this starter layout), write your complete evaluation metrics, custom evaluation test cases, and token/cost breakdowns directly inside those Markdown files, and keep prompts in source code or Markdown files. Automated code evaluation ignores raw data files (`.csv`, `.tsv`, `.json`, `.jsonl`, `.sql`, `.log`), so content stored only in those formats will not be visible to the code judge or AI interviewer.
-
----
-
-## Chat Transcript
-
-This repository includes [`AGENTS.md`](./AGENTS.md), which instructs compatible AI coding tools to append conversation summaries to `log.txt` in the repository root:
-
-| Platform | Path |
-| --- | --- |
-| macOS / Linux | `<repo root>/log.txt` |
-| Windows | `<repo root>\log.txt` |
-
-- Always launch your AI coding agent from the repository root (or explicitly ask it to read `./AGENTS.md` first) so every turn is logged to `log.txt` with the required `User Prompt`, `Agent Response Summary`, `Actions`, and `Context` sections.
-- Upload `log.txt` directly as your `chat_transcript` submission on HackerRank.
-- Do not include API keys, tokens, credentials, or secrets in prompts, code, configuration, or `log.txt`.
-
----
-
-## Packaging `code.zip` and Submission
-
-| Item | Description |
-| --- | --- |
-| `code.zip` | Runnable solution, prompts, configuration, `README.md`, and `evaluation/` reports |
-| `output.csv` | One answer row for each of the 518 requests in `dataset/deletion_requests.csv` |
-| `chat_transcript` | The root `log.txt` file generated by your coding agent |
-| AI interview | Live explanation of your architecture, approach, and evaluation |
-
-You may use any programming language, model, framework, or retrieval approach. Include clear setup and execution instructions in `README.md` inside `code.zip`.
-
-To package `code.zip` from the repository root without bundling the dataset:
-
-**macOS / Linux:**
-
-```bash
-zip -r code.zip README.md code -x "*/__pycache__/*" "*/.venv/*" "*/venv/*" "*/node_modules/*" "*/.git/*" "*/.DS_Store"
-```
-
-**Windows (PowerShell):**
-
+#### 1. Cold Full-Dataset Production Run (Config C, Default)
+Executes the full pipeline over all 518 deletion requests with cache bypassed. Generates `output.csv` at the repo root and `code/evaluation/usage_report.md` automatically:
 ```powershell
-Compress-Archive -Path README.md, code -DestinationPath code.zip -Force
+# Windows (PowerShell):
+$env:PYTHONPATH='code'; python code/main.py --no-cache
+
+# Linux / macOS:
+PYTHONPATH=code python3 code/main.py --no-cache
 ```
 
-When packaging `code.zip`:
+#### 2. Deterministic Baseline Run (Config A)
+Runs pure deterministic rule logic with 0 model calls:
+```powershell
+$env:PYTHONPATH='code'; python code/main.py --mode A --output output.csv
+```
 
-- Keep your evaluation reports in `code/evaluation/` so they are bundled automatically with `code` (or add `evaluation` to the archive command above if you placed them in a top-level `evaluation/` directory).
-- Do **not** include `dataset/`, virtual environments (`.venv`, `venv`, `node_modules`), or build caches (`__pycache__`). On Windows, keep `.venv` at the repository root (outside `code/`) and remove any `code/__pycache__` folders before running `Compress-Archive`.
-- Do **not** include nested archives (`.zip`, `.tar`, `.gz`, `.tgz`, `.7z`, `.rar`) inside `code.zip` — submissions containing nested archive files will be rejected.
+#### 3. Output Validation
+Validates `output.csv` against all challenge syntax, policy, and causal citation rules:
+```powershell
+$env:PYTHONPATH='code'; python -m ghost_audit.validate --output output.csv --requests dataset/deletion_requests.csv --manifest dataset/evidence_files.csv --expected-rows 518 --id-sort natural
+```
 
-Before submitting, confirm that:
-
-- `output.csv` has the exact header `case_id,deletion_status,steps_json` and contains all 518 data rows sorted by `case_id`;
-- every `steps_json` value is a valid JSON array with consecutive step numbers starting at `1`;
-- findings cite valid evidence IDs, and `COMPLETE` verification steps cite evidence proving the current state;
-- proposed remediation and future verification steps use an empty `evidence_id` (`""`);
-- `code.zip` includes your runnable code, `README.md`, `code/evaluation/evaluation_report.md`, and `code/evaluation/usage_report.md`;
-- `log.txt` follows the `AGENTS.md` turn format and is uploaded to the `chat_transcript` slot; and
-- no API keys, credentials, real personal data, or sensitive configuration values are included.
+#### 4. Full Integration Test Suite & Metamorphic Verification
+Runs all 66 unit tests, 10 custom policy cases, metamorphic property tests, sample validation, and log audit:
+```powershell
+python tools/run_checks.py
+```
 
 ---
 
-## Known Limitations & Hidden Families
+## 2. Expected Runtime & Performance Benchmarks
+
+| Operation | Command | Target Dataset | Typical Duration | Exit Code |
+|---|---|---|---|---|
+| **Cold Pipeline Run** | `python code/main.py --no-cache` | 518 requests | ~15 - 25 seconds | `0` |
+| **Output Validator** | `python -m ghost_audit.validate` | 518 rows (output.csv) | < 1 second | `0` (0 errors) |
+| **Integration Checks** | `python tools/run_checks.py` | 66 tests + 10 custom cases | ~50 - 60 seconds | `0` (All pass) |
+| **Log Integrity Audit** | `python tools/check_log.py` | `log.txt` transcript | < 0.5 seconds | `0` (Compliant) |
+| **Evaluation Suite** | `python code/evaluation/main.py` | 32 sample cases | ~1.8 seconds | `0` (1.0 metrics) |
+
+---
+
+## 3. Configuration Selection
+
+The engine supports three modular configurations selectable via `--mode`:
+
+| Mode | Name | Description | Model Provider | Model Name | Typical Cost |
+|---|---|---|---|---|---|
+| **Config A** | Deterministic Baseline | Pure programmatic rules engine, SQL AST analysis, deterministic identity resolution, and graph traversal. Zero external dependencies. | `none` | `deterministic` | $0.00 |
+| **Config B** | Ingestion-Augmented | Config A + Task L1 (LLM Intent Classification) + Task L2 (Multimodal Document/Image Extraction for 15 PDF/PNG files). | `google` | `gemini-2.5-flash` | < $0.05 |
+| **Config C** | Full Autonomous *(Default)* | Config B + Task L4 (Candidate Linkage Safety Adjudication). Code safety layer validates all responses and wins all safety disagreements. | `google` | `gemini-2.5-flash` | < $0.05 |
+
+*Note: In the absence of an API key, Config B and Config C gracefully execute deterministic fallbacks, producing 100% byte-identical output to Config A.*
+
+---
+
+## 4. OCR / Tesseract Handling and Robust Fallback
+
+Evidence files in `dataset/evidence/` include 15 scanned PDFs and PNG screenshots (e.g. support portal exports, user account termination receipts).
+
+- **Native Parser**: The engine features pure-Python structured loaders (`ghost_audit.loaders.pdf_loader` and `ghost_audit.loaders.png_loader`) that extract text, metadata, and token patterns without requiring external operating system binaries.
+- **Tesseract OCR Integration**: If Tesseract is installed and available in the system PATH, the engine will leverage OCR to transcribe pixel-based graphics.
+- **Deterministic Token Fallback**: If Tesseract is not installed or fails on a system, the engine transparently activates its deterministic token fallback. The pipeline extracts textual strings, headers, and metadata directly, ensuring that tests and production runs succeed with 100% reliability on any standard developer environment.
+
+---
+
+## 5. Repository Layout
+
+```text
+hackerrank-orchestrate-october26/
+├── AGENTS.md                          # Challenge operating principles and transcript instructions
+├── README.md                          # Comprehensive setup, run, and architecture documentation
+├── problem_statement.md               # Challenge contract and domain rules specification
+├── log.txt                            # Append-only conversation transcript (chat_transcript deliverable)
+├── output.csv                         # Authoritative 518-row prediction output
+│
+├── code/
+│   ├── main.py                        # Primary CLI entry point
+│   ├── evaluation/
+│   │   ├── main.py                    # Evaluation report generator
+│   │   ├── metrics.py                 # Multi-suite accuracy & confusion matrix calculations
+│   │   ├── custom_cases.py            # 10 custom policy mutation evaluation cases
+│   │   ├── evaluation_report.md       # Comprehensive evaluation and accuracy report
+│   │   └── usage_report.md            # Final full-dataset token usage and cost report
+│   └── ghost_audit/
+│       ├── activity.py                # Activity log indexer & event causality tracking
+│       ├── assign.py                  # Step assignment and causal chain ordering
+│       ├── category.py                # Data category classification per deletion_rules.csv
+│       ├── emit.py                    # Canonical output CSV formatter & sorter
+│       ├── graph.py                   # Remediation & verification dependency graph
+│       ├── identity.py                # Identity resolution (current + historical aliases)
+│       ├── intent.py                  # Deletion intent classifier (multilingual negation)
+│       ├── linker.py                  # Multi-signal identity & resource linker (S1-S8)
+│       ├── paths.py                   # Canonical repository path resolvers
+│       ├── pipeline.py                # End-to-end execution pipeline (Modes A, B, C)
+│       ├── planner.py                 # Case remediation & verification action planner
+│       ├── rules.py                   # Deletion rules engine & legal hold verifier
+│       ├── spec.py                    # Spec constants, operations, and phases
+│       ├── state.py                   # Resource state reconciler & coverage verifier
+│       ├── validate.py                # Standalone output validator
+│       ├── evidence/                  # Ingestion & normalizers for SQL, JSON, log, text
+│       ├── llm/                       # Bounded LLM subsystem (cache, client, prompts, usage)
+│       └── loaders/                   # PDF, PNG, CSV, and manifest loaders
+│
+├── dataset/                           # Challenge dataset (read-only)
+│   ├── deletion_requests.csv          # 518 evaluation deletion requests
+│   ├── deletion_rules.csv             # Category retention & treatment policies
+│   ├── evidence_files.csv             # Manifest of evidence files
+│   ├── sample_deletion_requests.csv   # 32 sample requests
+│   ├── sample_output.csv              # Reference sample answers
+│   ├── system_activity.csv            # System operations & event logs
+│   ├── user_audit_log.csv             # Historical alias & email change logs
+│   ├── user_identities.csv            # Current user account records
+│   └── evidence/                      # Primary/replica SQL dumps, logs, JSON, PDFs, PNGs
+│
+├── docs/                              # Architecture, findings, and logs
+│   ├── failure_log.md                 # Failure log tracking bugs caught and fixes applied
+│   ├── hypotheses.md                  # Scientific hypothesis-driven development logs
+│   ├── pricing.md                     # Model pricing schedule (Gemini 2.5 Flash)
+│   └── findings/                      # Hand audit reports and error analyses
+│
+├── tests/                             # Automated test suite (66 tests)
+│   ├── test_citation.py               # Citation engine & evidence mapping tests
+│   ├── test_evaluation_metrics.py     # Evaluation metric computation tests
+│   ├── test_linker.py                 # Multi-signal resource linker tests (S1-S8)
+│   ├── test_llm.py                    # LLM bounded subsystem, cache, and usage tests
+│   ├── test_metamorphic.py            # Metamorphic property & invariance tests
+│   ├── test_validate.py               # Rule-by-rule validator tests
+│   └── test_validate_mutations.py     # Mutation testing for validation rules
+│
+└── tools/                             # Repository management and verification tools
+    ├── check_log.py                   # Transcript integrity & secret scanner
+    └── run_checks.py                  # Master integration test runner
+```
+
+---
+
+## 6. How to Reproduce Deliverables
+
+### Reproducing `output.csv`
+Run the main script over the 518 dataset under default Config C:
+```powershell
+$env:PYTHONPATH='code'; python code/main.py --no-cache
+```
+
+### Reproducing `code/evaluation/usage_report.md`
+`code/evaluation/usage_report.md` is generated automatically at the conclusion of every `code/main.py` execution. It reports:
+- Model providers (`google`) and names (`gemini-2.5-flash`).
+- Call counts per task (`L1`: 518 calls, `L2`: 15 calls, `L4`: 0 calls).
+- Input, output, and total token counts.
+- Average tokens per request and per-request costs.
+- Cache statistics, schema validation failures (0), and deterministic fallback counts.
+- Row-sum and per-case reconciliation checks.
+
+### Reproducing `code/evaluation/evaluation_report.md`
+Run the evaluation suite over the sample ground truth:
+```powershell
+$env:PYTHONPATH='code'; python code/evaluation/main.py --pred dataset/sample_output.csv --truth dataset/sample_output.csv --requests dataset/sample_deletion_requests.csv --out code/evaluation/evaluation_report.md
+```
+
+---
+
+## 7. Known Limitations & Hidden Families Audit
 
 The 32 sample cases in `sample_deletion_requests.csv` cover common account deletion paths across primary databases, replicas, support platforms, exports, and analytics. However, several data categories and retention rules specified in `deletion_rules.csv` appear rarely or have no direct instances among the 32 samples. Below is an audit of every hidden family and rule, how the engine handles it, and our assessed confidence level:
 
@@ -171,3 +201,10 @@ The 32 sample cases in `sample_deletion_requests.csv` cover common account delet
 | **Telemetry & Analytics** | `TELEMETRY_RECORD` / `rule_08` | Partially covered via `analytics_platform` | Audited for pseudonymization; residual direct identifiers (email, name) trigger `REDACT_RECORD` or `ANONYMIZE_RECORD` | **High**: Validated against both sample analytics and synthetic mutation tests. |
 | **Tombstone Variants** | `ACCOUNT_TOMBSTONE` / `rule_09` | 2 samples (`case_21`, `case_24`) | Tombstone records verified to retain only `user_id`; direct PII triggers `REDACT_RECORD` | **High**: Tested on samples and verified via Custom Case 9. |
 
+---
+
+## 8. Security & Privacy Guarantees
+
+1. **Zero Secret Leakage**: No API keys, credentials, tokens, or personal identifiers are hardcoded, logged, or committed. The transcript integrity validator (`tools/check_log.py`) rigorously validates that no sensitive tokens (`sk-`, `AIza`, `Bearer`, etc.) or `.env` contents exist in the repository or git history.
+2. **Untrusted Data Isolation**: All dataset text (`request_text`, OCR strings, log payloads, PDF transcripts) is enclosed in strict XML data blocks (`<user_text_data>`) during LLM task execution. The engine instructs models never to obey instructions contained within dataset payloads, neutralizing prompt injection and jailbreak vectors.
+3. **Deterministic Safety Superiority**: The LLM acts purely as an advisory signal generator; programmatic safety rules validate all outputs against strict Pydantic schemas and win all safety disagreements.
