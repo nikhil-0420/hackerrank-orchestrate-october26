@@ -80,7 +80,7 @@ class TestMetamorphic(unittest.TestCase):
             out2 = temp_dir / "out2.csv"
 
             # Run baseline
-            run_pipeline(str(t_req), str(out1))
+            run_pipeline(str(t_data), str(t_req), str(out1), config=None)
 
             # Mutate: invert every reported_status (e.g. COMPLETE -> NOT_STARTED, etc.)
             rows = []
@@ -98,7 +98,7 @@ class TestMetamorphic(unittest.TestCase):
                 writer.writerows(rows)
 
             # Run mutated
-            run_pipeline(str(t_req), str(out2))
+            run_pipeline(str(t_data), str(t_req), str(out2), config=None)
 
             # Assert byte-identical
             self.assertEqual(out1.read_bytes(), out2.read_bytes())
@@ -116,7 +116,7 @@ class TestMetamorphic(unittest.TestCase):
             out1 = temp_dir / "out1.csv"
             out2 = temp_dir / "out2.csv"
 
-            run_pipeline(str(t_req), str(out1))
+            run_pipeline(str(t_data), str(t_req), str(out1), config=None)
 
             # Shuffle rows
             with open(t_req, "r", encoding="utf-8") as f:
@@ -132,7 +132,7 @@ class TestMetamorphic(unittest.TestCase):
                 writer.writeheader()
                 writer.writerows(rows)
 
-            run_pipeline(str(t_req), str(out2))
+            run_pipeline(str(t_data), str(t_req), str(out2), config=None)
 
             # Sort both outputs by case_id and assert identical
             def read_sorted_cases(p):
@@ -156,8 +156,8 @@ class TestMetamorphic(unittest.TestCase):
             out1 = temp_dir / "out1.csv"
             out2 = temp_dir / "out2.csv"
 
-            run_pipeline(str(t_req), str(out1))
-            run_pipeline(str(t_req), str(out2))
+            run_pipeline(str(t_data), str(t_req), str(out1), config=None)
+            run_pipeline(str(t_data), str(t_req), str(out2), config=None)
 
             self.assertEqual(out1.read_bytes(), out2.read_bytes())
 
@@ -177,7 +177,7 @@ class TestMetamorphic(unittest.TestCase):
             out2 = temp_dir / "out2.csv"
 
             # Baseline run
-            run_pipeline(str(t_req), str(out1))
+            run_pipeline(str(t_data), str(t_req), str(out1), config=None)
 
             # Programmatically select earliest manifest capture time
             earliest_time = None
@@ -209,7 +209,7 @@ class TestMetamorphic(unittest.TestCase):
                 writer.writerows(rows)
 
             # Run mutated
-            run_pipeline(str(t_req), str(out2))
+            run_pipeline(str(t_data), str(t_req), str(out2), config=None)
 
             # Output must change because evidence is no longer citable
             self.assertNotEqual(out1.read_bytes(), out2.read_bytes())
@@ -228,7 +228,7 @@ class TestMetamorphic(unittest.TestCase):
             out1 = temp_dir / "out1.csv"
             out2 = temp_dir / "out2.csv"
 
-            run_pipeline(str(t_req), str(out1))
+            run_pipeline(str(t_data), str(t_req), str(out1), config=None)
 
             # Add decoy identity row
             with open(t_ident, "a", encoding="utf-8", newline="") as f:
@@ -242,7 +242,7 @@ class TestMetamorphic(unittest.TestCase):
                     "2026-08-01T00:00:00Z",
                 ])
 
-            run_pipeline(str(t_req), str(out2))
+            run_pipeline(str(t_data), str(t_req), str(out2), config=None)
 
             self.assertEqual(out1.read_bytes(), out2.read_bytes())
 
@@ -259,7 +259,7 @@ class TestMetamorphic(unittest.TestCase):
             out1 = temp_dir / "out1.csv"
             out2 = temp_dir / "out2.csv"
 
-            run_pipeline(str(t_req), str(out1))
+            run_pipeline(str(t_data), str(t_req), str(out1), config=None)
 
             # Mutate request_text with injection string
             rows = []
@@ -275,7 +275,7 @@ class TestMetamorphic(unittest.TestCase):
                 writer.writeheader()
                 writer.writerows(rows)
 
-            run_pipeline(str(t_req), str(out2))
+            run_pipeline(str(t_data), str(t_req), str(out2), config=None)
 
             self.assertEqual(out1.read_bytes(), out2.read_bytes())
 

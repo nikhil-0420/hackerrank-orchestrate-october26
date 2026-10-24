@@ -31,7 +31,7 @@ def get_raw_source_snippet(obs, manifest_by_id) -> str:
 
     kind = obs.source_kind
     if kind == "log":
-        # e.g. "trace:tr-XXXX lines:12-14 id:account_123" or "line:12 id:account_123"
+        # e.g. "trace:tr-XXXX lines:12-14 id:resource_123" or "line:12 id:resource_123"
         lines = meta.abs_path.read_text(encoding="utf-8", errors="replace").splitlines()
         if "lines:" in obs.raw_ref:
             try:

@@ -1,7 +1,7 @@
 """
 Output validation harness for Ghost Audit.
 Validates structure, integrity, and domain rules against problem_statement.md.
-Does NOT import anything from evaluation and does NOT read ground-truth labels.
+Does NOT import anything from external scoring suites and does NOT read ground-truth labels.
 """
 
 from __future__ import annotations

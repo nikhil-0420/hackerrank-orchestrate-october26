@@ -25,7 +25,7 @@ class Observation:
     obs_time: str                       # Row/section/log timestamp (observed_at, updated_at, captured_at)
     system_id: str                      # Originating system (e.g. account_service, search_service)
     collection: str                     # Collection or table name (e.g. customer_profiles, search_documents)
-    resource_id: str                    # Unique resource identifier (e.g. account_005, search_123)
+    resource_id: str                    # Unique resource identifier (e.g. res_005, res_123)
     identifiers: Identifiers
     state: Dict[str, Any]               # Observed status, flags, replication info (immutable copy)
     source_kind: str                    # File category: 'sql', 'json', 'log', 'txt', 'pdf', 'image'
