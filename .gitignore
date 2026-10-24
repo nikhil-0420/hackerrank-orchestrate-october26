@@ -13,3 +13,7 @@ env/
 .DS_Store
 Thumbs.db
 scratch/
+# Secrets and environment variables
+.env
+*.env
+.env.*
