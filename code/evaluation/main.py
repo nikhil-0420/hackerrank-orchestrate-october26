@@ -15,6 +15,10 @@ import subprocess
 import sys
 from typing import Any
 
+CODE_DIR = Path(__file__).resolve().parent.parent
+if str(CODE_DIR) not in sys.path:
+    sys.path.insert(0, str(CODE_DIR))
+
 from evaluation.metrics import (
     compute_error_table,
     compute_field_level_accuracy,
