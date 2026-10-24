@@ -41,7 +41,9 @@ NON_DELETION_PATTERNS: List[Tuple[str, str]] = [
     (r"correct it without removing", "correct_without_removing"),
     (r"replace it with the new one", "replace_with_new_number"),
     (r"change the email address", "change_email_address"),
-    # Access / Information request
+    # Access / Information request / Export
+    (r"\bexport\b", "data_export"),
+    (r"portability", "data_portability"),
     (r"what personal information you hold", "subject_access_request"),
     (r"copy of last year's invoices", "invoice_access_copy"),
     (r"copy of the information held", "information_copy_access"),
