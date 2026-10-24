@@ -45,15 +45,17 @@ USER_ID_RE = re.compile(r"\b(user_\d+)\b")
 class ActivityLog:
     """In-memory collection of system activity events with time-gated query methods."""
 
-    def __init__(self, rows: list[SystemActivityRow] | None = None):
-        self.rows: list[SystemActivityRow] = rows or []
+    def __init__(self, rows: list[SystemActivityRow] | None = None, path: Path | str | None = None):
+        if rows is not None:
+            self.rows = rows
+        else:
+            p = Path(path) if path else SYSTEM_ACTIVITY_PATH
+            self.rows = self._load_from_path(p)
 
-    @classmethod
-    def load(cls, path: Path | str | None = None) -> ActivityLog:
-        p = Path(path) if path else SYSTEM_ACTIVITY_PATH
+    @staticmethod
+    def _load_from_path(p: Path) -> list[SystemActivityRow]:
         if not p.exists():
-            return cls([])
-
+            return []
         loaded: list[SystemActivityRow] = []
         with open(p, "r", encoding="utf-8") as f:
             reader = csv.DictReader(f)
@@ -70,7 +72,12 @@ class ActivityLog:
                         details=r.get("details", "").strip(),
                     )
                 )
-        return cls(loaded)
+        return loaded
+
+    @classmethod
+    def load(cls, path: Path | str | None = None) -> ActivityLog:
+        return cls(path=path)
+
 
     def _filter_time(self, rows: list[SystemActivityRow], audit_at: str | None) -> list[SystemActivityRow]:
         if not audit_at:
