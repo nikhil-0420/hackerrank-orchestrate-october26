@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |---|---|
-| **Git Commit** | `7c6e40826cb1c915de8833168c2f9bc87bd2c867` |
+| **Git Commit** | `34756db897f6f810fa747d6840aa29ccd4c20807` |
 | **Command** | `python code/evaluation/main.py --pred dataset/sample_output.csv --truth dataset/sample_output.csv --out code/evaluation/evaluation_report.md` |
 | **Predictions** | `dataset/sample_output.csv` (32 cases) |
 | **Ground Truth** | `dataset/sample_output.csv` (32 cases) |
