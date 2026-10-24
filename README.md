@@ -155,3 +155,19 @@ Before submitting, confirm that:
 - `code.zip` includes your runnable code, `README.md`, `code/evaluation/evaluation_report.md`, and `code/evaluation/usage_report.md`;
 - `log.txt` follows the `AGENTS.md` turn format and is uploaded to the `chat_transcript` slot; and
 - no API keys, credentials, real personal data, or sensitive configuration values are included.
+
+---
+
+## Known Limitations & Hidden Families
+
+The 32 sample cases in `sample_deletion_requests.csv` cover common account deletion paths across primary databases, replicas, support platforms, exports, and analytics. However, several data categories and retention rules specified in `deletion_rules.csv` appear rarely or have no direct instances among the 32 samples. Below is an audit of every hidden family and rule, how the engine handles it, and our assessed confidence level:
+
+| Category / Family | Subsystem / Rule | Sample Coverage | Pipeline Behavior & Implementation | Confidence Level |
+|---|---|---|---|---|
+| **Legal Holds** | `LEGAL_HOLD_RECORD` / `rule_10` | 0 samples in 32 sample cases (7 unlinked files in 518 dataset) | `RuleEngine` checks statutory hold validity (`retention_until >= audit_at`), emits `VERIFY_RECORD_PRESENT`, preserves record | **High**: Tested via Custom Case 5 and comprehensive `RuleEngine` unit tests. |
+| **Marketing Records** | `MARKETING_PREFERENCES` / `rule_05` | 0 samples in 32 sample cases | Communication and marketing preferences are categorized via schema shape and audited for deletion or opt-out retention | **Medium**: Evaluated strictly from `deletion_rules.csv` definitions. |
+| **Cache Systems** | `TEMP_CACHE` / `rule_07` | 0 samples in 32 sample cases | Ephemeral Redis/Memcached keys are categorized and audited for absence verification | **Medium**: Fallback to covering snapshots if no direct cache observation exists. |
+| **Email Delivery Logs** | `COMMUNICATION_LOG` / `rule_06` | 0 samples in 32 sample cases | Mail service delivery logs evaluated under communication retention policies | **Medium**: Governed by standard log retention rules. |
+| **Telemetry & Analytics** | `TELEMETRY_RECORD` / `rule_08` | Partially covered via `analytics_platform` | Audited for pseudonymization; residual direct identifiers (email, name) trigger `REDACT_RECORD` or `ANONYMIZE_RECORD` | **High**: Validated against both sample analytics and synthetic mutation tests. |
+| **Tombstone Variants** | `ACCOUNT_TOMBSTONE` / `rule_09` | 2 samples (`case_21`, `case_24`) | Tombstone records verified to retain only `user_id`; direct PII triggers `REDACT_RECORD` | **High**: Tested on samples and verified via Custom Case 9. |
+

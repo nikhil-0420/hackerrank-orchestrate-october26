@@ -169,6 +169,23 @@ class TestEvaluationMetrics(unittest.TestCase):
         errors = compute_error_table(corrupted, truths)
         self.assertGreater(len(errors), 0)
 
+        # Test module error attribution
+        from evaluation.metrics import compute_module_error_attribution, compute_email_breakdowns
+        attr = compute_module_error_attribution(errors)
+        self.assertIn("identity", attr)
+        self.assertIn("rules", attr)
+        self.assertGreater(sum(m["error_count"] for m in attr.values()), 0)
+
+        # Test email breakdowns
+        req_path = REPO_ROOT / "dataset" / "sample_deletion_requests.csv"
+        if req_path.exists():
+            email_bd = compute_email_breakdowns(truths, truths, req_path)
+            self.assertIn("Current Email", email_bd)
+            self.assertIn("Historical Email Alias", email_bd)
+            self.assertEqual(email_bd["Current Email"]["status_acc"], 1.0)
+            self.assertEqual(email_bd["Historical Email Alias"]["status_acc"], 1.0)
+
 
 if __name__ == "__main__":
     unittest.main()
+

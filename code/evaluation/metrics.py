@@ -475,3 +475,112 @@ def compute_error_table(
                 })
 
     return errors
+
+
+def compute_email_breakdowns(
+    preds: dict[str, dict[str, Any]],
+    truths: dict[str, dict[str, Any]],
+    requests_path: Path,
+) -> dict[str, dict[str, Any]]:
+    """
+    Computes metric breakdowns grouped by request email resolution kind:
+    - Current Email: Request submitted with subject's primary/current email
+    - Historical Email Alias: Request submitted with a historical alias from user_audit_log
+    """
+    import csv
+    from ghost_audit.identity import IdentityResolver
+
+    resolver = IdentityResolver()
+    email_groups: dict[str, dict[str, dict[str, Any]]] = {
+        "Current Email": {},
+        "Historical Email Alias": {},
+    }
+
+    if requests_path.exists():
+        with open(requests_path, "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                cid = row.get("case_id", "").strip()
+                if cid not in truths:
+                    continue
+                email = row.get("email", "").strip()
+                try:
+                    ident = resolver.resolve(email)
+                    group_key = (
+                        "Historical Email Alias"
+                        if ident.resolution_kind == "historical"
+                        else "Current Email"
+                    )
+                except Exception:
+                    group_key = "Current Email"
+                email_groups[group_key][cid] = truths[cid]
+
+    breakdowns: dict[str, dict[str, Any]] = {}
+    for g_name, g_truths in email_groups.items():
+        if not g_truths:
+            continue
+        g_preds = {cid: preds[cid] for cid in g_truths if cid in preds}
+        st_metrics = compute_status_metrics(g_preds, g_truths)
+        ex_metrics = compute_row_exact_match(g_preds, g_truths)
+        prf_metrics = compute_step_multiset_prf(g_preds, g_truths)
+        seq_metrics = compute_sequence_metrics(g_preds, g_truths)
+        breakdowns[g_name] = {
+            "count": len(g_truths),
+            "status_acc": st_metrics["status_accuracy"],
+            "row_exact_match": ex_metrics["exact_match_rate"],
+            "step_micro_f1": prf_metrics["micro_f1"],
+            "seq_exact_order": seq_metrics["exact_order_rate"],
+        }
+
+    return breakdowns
+
+
+def compute_module_error_attribution(
+    errors: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    """
+    Attributes non-exact case errors to specific pipeline modules:
+    - identity: Email alias resolution, user ID joins, identity unification
+    - linkage: S1-S8 signal collection, bipartite anchor assignment, hard rule filtering
+    - state: Multi-replica observation reconciliation, snapshot coverage, time-gated status
+    - rules: Policy evaluation against deletion_rules.csv, retention expiry, legal hold
+    - emit: Phase ordering, operation ordering within phase, step numbering
+    - citation: Latest citable covering file resolution, timegate <= audit_at compliance
+    """
+    modules = ["identity", "linkage", "state", "rules", "emit", "citation"]
+    attr: dict[str, dict[str, Any]] = {
+        m: {"error_count": 0, "cases": set(), "reasons": []} for m in modules
+    }
+
+    for err in errors:
+        reason = err.get("reason", "").lower()
+        cid = err.get("case_id", "")
+        if "identity" in reason or "user" in reason or "alias" in reason:
+            mod = "identity"
+        elif "resource" in reason or "missing step" in reason or "extra step" in reason:
+            mod = "linkage"
+        elif "state" in reason:
+            mod = "state"
+        elif "operation" in reason or "status mismatch" in reason:
+            mod = "rules"
+        elif "evidence_id" in reason or "citation" in reason:
+            mod = "citation"
+        elif "phase" in reason or "order" in reason or "step_no" in reason:
+            mod = "emit"
+        else:
+            mod = "rules"
+
+        attr[mod]["error_count"] += 1
+        attr[mod]["cases"].add(cid)
+        attr[mod]["reasons"].append(err.get("reason", ""))
+
+    return {
+        m: {
+            "error_count": attr[m]["error_count"],
+            "case_count": len(attr[m]["cases"]),
+            "cases": sorted(attr[m]["cases"]),
+            "sample_reasons": attr[m]["reasons"][:3],
+        }
+        for m in modules
+    }
+
