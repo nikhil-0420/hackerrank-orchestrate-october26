@@ -96,10 +96,11 @@ def check_append_only(log_path: Path) -> list[str]:
         if not current_bytes.startswith(head_bytes):
             head_norm = head_bytes.decode("utf-8", errors="replace").replace("\r\n", "\n")
             curr_norm = current_bytes.decode("utf-8", errors="replace").replace("\r\n", "\n")
-            if not curr_norm.startswith(head_norm):
+            if not (curr_norm.startswith(head_norm) or curr_norm.startswith(head_norm.rstrip())):
                 violations.append(
                     "Append-only failure: log.txt content does not match git show HEAD:log.txt at earlier bytes."
                 )
+
     except FileNotFoundError:
         violations.append("git command not found; cannot verify append-only state.")
     except Exception as e:

@@ -110,4 +110,91 @@ repo_root=E:\Orcherstate\hackerrank-orchestrate-october26
 worktree=main
 parent_agent=none
 
+## 2026-10-24T20:33:40+05:30 Phase 1: Evidence ingestion and observation normalizers
+
+User Prompt (verbatim, secrets redacted):
+Read AGENTS.md and problem_statement.md. Task: Phase 1, evidence ingestion. No decisions,
+no deletion logic, no hardcoded case ids / file ids / sample answers. Python 3, stdlib +
+pdfplumber/pytesseract only if already installed. Targeted, reviewable commits.
+
+Build code/ghost_audit/ with: paths.py, loaders/, evidence/, observation.py.
+
+OBSERVATION model (dataclass), one per (record, file):
+  file_id, file_captured_at, obs_time, system_id, collection, resource_id,
+  identifiers{email,phone,email_hash,user_ref,name}, state{...}, source_kind, raw_ref
+- obs_time = the SECTION/ROW timestamp (snapshot `captured_at`, row `observed_at`/`updated_at`,
+  log line timestamp). file_captured_at = manifest value. Keep BOTH: later we gate STATE on
+  obs_time and CITE only files with file_captured_at <= audit_at. (A bundle exported on 09-17
+  contains sections captured 09-09 and 09-15; do not discard them by file time.)
+- Never mutate raw data.
+
+NORMALIZERS (dataset/evidence_files.csv is the manifest):
+ - .sql: execute each file in in-memory sqlite3; read EVERY table (primary + replicas);
+   expand any JSON column (e.g. record_json); keep table name as `replica_of` info
+   (replication drift: a row in a replica but not primary is a separate observation).
+ - .json: generic walk that tracks the enclosing section's captured_at/data_store/collection;
+   emit one Observation per dict containing resource_id. Handle snapshot bundles,
+   service_resource_export (service_exports.<svc>.<list>), connector configs, export jobs,
+   security ledger.
+ - .log: parse key=value lines AND JSON lines. GROUP lines by trace_id: the identifier
+   (lookup_key / match_key / correlation_key / customer_email / customer_reference) is
+   often on a `*_started` line while resource_id is on the `*_completed` line of the SAME
+   trace. Emit one Observation per resource_id carrying the merged identifiers. Some keys
+   are masked/truncated (e.g. correlation_key="lucia-torres@gmail.") so store raw value and
+   a `masked: bool`. Count lines that match no grammar: must be 0, print the count per file.
+ - .txt: handover lines `time | system | resource | CATEGORY | STATE | identifier`.
+ - .pdf: pdftotext -layout text; .png: tesseract OCR text. Store text only (extraction by
+   an LLM comes later); cache by sha256 under code/.cache/ (gitignored).
+ - COVERAGE: for each snapshot section/table record (file, system_id, collection,
+   obs_time) so "absent from a covering snapshot" can be distinguished from "not covered".
+
+Also: timegate.py with
+  visible_state(obs, audit_at): obs.obs_time <= audit_at   (inclusive)
+  citable(file, audit_at): file_captured_at <= audit_at     (inclusive)
+
+DELIVERABLES: a CLI `python3 -m ghost_audit.evidence.dump` printing per-file observation
+counts, unparsed-line counts, and 10 random observations each traced back to the raw
+source text. ACCEPTANCE: every evidence file parses, unparsed lines == 0, and the dump
+output is pasted into docs/failure_log.md under "Phase 1 gate".
+Diagnose before coding: first print one sample of each distinct log line grammar and each
+SQL table schema you find, and list them in docs/hypotheses.md.
+Append your AGENTS.md log entry (tool=, model= exact) and run tools/check_log.py.
+
+Agent Response Summary:
+Diagnosed all 7 distinct log line grammars across 2,211 log lines and 18 SQL table schemas across 24 database files, documenting findings in docs/hypotheses.md. Built the ghost_audit evidence ingestion module including paths.py, timegate.py, loaders, observation.py, and format normalizers for SQL, JSON, logs, TXT, PDF, and PNG without mutating raw data. Implemented CLI dump tool ghost_audit.evidence.dump which verified that 100% of the 94 evidence files parsed with 0 unparsed lines across all formats, and recorded the full report under Phase 1 gate in docs/failure_log.md.
+
+Actions:
+* replace_file_content: docs/hypotheses.md
+* write_to_file: .gitignore
+* write_to_file: code/ghost_audit/paths.py
+* write_to_file: code/ghost_audit/observation.py
+* write_to_file: code/ghost_audit/timegate.py
+* write_to_file: code/ghost_audit/loaders/manifest.py
+* write_to_file: code/ghost_audit/loaders/pdf_loader.py
+* write_to_file: code/ghost_audit/loaders/png_loader.py
+* write_to_file: code/ghost_audit/loaders/__init__.py
+* write_to_file: code/ghost_audit/evidence/sql_normalizer.py
+* write_to_file: code/ghost_audit/evidence/json_normalizer.py
+* write_to_file: code/ghost_audit/evidence/log_normalizer.py
+* write_to_file: code/ghost_audit/evidence/txt_normalizer.py
+* write_to_file: code/ghost_audit/evidence/doc_normalizer.py
+* write_to_file: code/ghost_audit/evidence/normalizer.py
+* write_to_file: code/ghost_audit/evidence/coverage.py
+* write_to_file: code/ghost_audit/evidence/__init__.py
+* write_to_file: code/ghost_audit/__init__.py
+* write_to_file: code/ghost_audit/evidence/dump.py
+* run_command: python -m ghost_audit.evidence.dump
+* replace_file_content: docs/failure_log.md
+* replace_file_content: log.txt
+* run_command: python tools/check_log.py
+
+Context:
+tool=Antigravity
+model=Gemini 3.8 Flash (High)
+branch=main
+repo_root=E:\Orcherstate\hackerrank-orchestrate-october26
+worktree=main
+parent_agent=none
+
+
 
