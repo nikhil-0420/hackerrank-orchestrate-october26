@@ -251,4 +251,65 @@ Total Unparsed Lines : 0
 --------------------------------------------------------------------------------
 
 ACCEPTANCE CHECK: All files parsed successfully with unparsed lines == 0.
-`
+```
+
+## Phase 2b linker lab
+
+### Linker Performance Summary vs Naive Baseline
+
+| Metric | Naive Baseline (S1 only) | Phase 2b Linker | Delta / Gain |
+|---|---|---|---|
+| Target Ground Truth Resources | 111 | 111 | - |
+| True Positives (TP) | 50 | 109 | +59 |
+| False Positives (FP) | 1 | 0 | -1 |
+| False Negatives (FN) | 61 | 2 | -59 |
+| **Precision** | **98.04%** | **100.00%** | **+1.96%** |
+| **Recall** | **45.05%** | **98.20%** | **+53.15%** |
+| **F1 Score** | **61.73%** | **99.09%** | **+37.36%** |
+
+### Per-Resource-Type Precision and Recall
+
+| Resource Type | System | Ground Truth | TP | FP | FN | Precision | Recall |
+|---|---|---|---|---|---|---|---|
+| `account` | `account_service` | 32 | 32 | 0 | 0 | 100.00% | 100.00% |
+| `search` | `search_service` | 12 | 12 | 0 | 0 | 100.00% | 100.00% |
+| `support` | `support_platform` | 11 | 11 | 0 | 0 | 100.00% | 100.00% |
+| `export` | `export_service` | 2 | 2 | 0 | 0 | 100.00% | 100.00% |
+| `analytics` | `analytics_platform` | 13 | 13 | 0 | 0 | 100.00% | 100.00% |
+| `flow` | `integration_service` | 9 | 9 | 0 | 0 | 100.00% | 100.00% |
+| `backup` | `backup_service` | 6 | 6 | 0 | 0 | 100.00% | 100.00% |
+| `audit` | `security_service` | 24 | 22 | 0 | 2 | 100.00% | 91.67% |
+| `tombstone` | `identity_service` | 2 | 2 | 0 | 0 | 100.00% | 100.00% |
+
+### Signal Ablation Study (Drop Each Signal)
+
+| Ablation Experiment | Precision | Recall | F1 Score | Recall Loss (Delta) |
+|---|---|---|---|---|
+| **Full Linker (S1-S8)** | **100.00%** | **98.20%** | **99.09%** | **Baseline (0.00%)** |
+| Drop S1 (Record Identifiers) | 100.00% | 87.39% | 93.27% | -10.81% |
+| Drop S2 (User ID Joins) | 100.00% | 74.77% | 85.57% | -23.42% |
+| Drop S3 (Merged Traces) | 100.00% | 98.20% | 99.09% | -0.00% |
+| Drop S4 (Link Rows) | 100.00% | 98.20% | 99.09% | -0.00% |
+| Drop S5 (Chain Keys) | 100.00% | 98.20% | 99.09% | -0.00% |
+| Drop S6 (Handover Docs) | 100.00% | 97.30% | 98.63% | -0.90% |
+| Drop S7 (Account Anchors) | 100.00% | 87.39% | 93.27% | -10.81% |
+| Drop S8 (Activity Chain / Offsets) | 100.00% | 90.99% | 95.28% | -7.21% |
+
+### Leave-One-Family-Out Check
+
+| Excluded Evidence Family | Files Excluded | Precision | Recall | Recall Loss (Delta) |
+|---|---|---|---|---|
+| **None (Full Manifest)** | 0 | **100.00%** | **98.20%** | **0.00%** |
+| `evidence/databases/` | 24 | 100.00% | 92.79% | -5.41% |
+| `evidence/documents/` | 4 | 100.00% | 98.20% | -0.00% |
+| `evidence/images/` | 11 | 100.00% | 98.20% | -0.00% |
+| `evidence/logs/` | 26 | 97.78% | 79.28% | -18.92% |
+| `evidence/records/` | 29 | 91.67% | 49.55% | -48.65% |
+
+### Unattributed Ground Truth Resources on Samples
+
+| Case ID | Resource ID | Expected System | Reason / Candidates |
+|---|---|---|---|
+| `case_18` | `audit_record_6645` | `security_service` | Absent in evidence files (evidence_id='') |
+| `case_20` | `audit_record_5569` | `security_service` | Absent in evidence files (evidence_id='') |
+
