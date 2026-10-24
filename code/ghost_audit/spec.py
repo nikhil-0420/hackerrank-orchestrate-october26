@@ -190,6 +190,9 @@ OPERATION_GLOBAL_ORDER: Final[dict[str, int]] = {
     op: idx for idx, (_, op, _, _) in enumerate(OPERATION_TABLE, start=1)
 }
 
+# Within-phase resource ID ordering convention
+RESOURCE_ID_SORT_ORDER: Final[str] = "lexical"
+
 # Operation semantic matching chains: (Finding -> Remediation -> Verification)
 # Used for W02 convention checks.
 FINDING_TO_REMEDIATION: Final[dict[str, set[str]]] = {
