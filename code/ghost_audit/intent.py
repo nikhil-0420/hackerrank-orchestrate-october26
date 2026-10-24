@@ -36,6 +36,18 @@ NON_DELETION_PATTERNS: List[Tuple[str, str]] = [
     (r"still use it", "still_use_it"),
     (r"still need the account", "still_need_the_account"),
     (r"still want receipts", "still_want_receipts"),
+    # Multilingual explicit negation of deletion
+    (r"n[ãa]o (?:quero|desejo) (?:apagar|excluir|remover|fechar)", "dont_delete_pt"),
+    (r"n[ãa]o (?:apagar|excluir|remover)", "dont_delete_pt_short"),
+    (r"no (?:quiero|deseo) (?:borrar|eliminar|suprimir)", "dont_delete_es"),
+    (r"no (?:borrar|eliminar|suprimir)", "dont_delete_es_short"),
+    (r"ne (?:souhaite|veux) pas (?:supprimer|effacer|cl[oô]turer)", "dont_delete_fr"),
+    (r"ne pas (?:supprimer|effacer|cl[oô]turer)", "dont_delete_fr_short"),
+    (r"nicht (?:l[oö]schen|entfernen)", "dont_delete_de"),
+    (r"non (?:voglio|desidero) (?:cancellare|eliminare)", "dont_delete_it"),
+    (r"non (?:cancellare|eliminare)", "dont_delete_it_short"),
+    (r"삭제하지\s*(?:마세요|말아|않겠습니다)", "dont_delete_ko"),
+    (r"削除しないで", "dont_delete_ja"),
     # Rectification / Correction
     (r"is misspelled", "correction_misspelled"),
     (r"correct it without removing", "correct_without_removing"),
@@ -46,6 +58,7 @@ NON_DELETION_PATTERNS: List[Tuple[str, str]] = [
     (r"copy of last year's invoices", "invoice_access_copy"),
     (r"copy of the information held", "information_copy_access"),
     (r"download my account information", "data_portability_download"),
+    (r"export (?:all )?(?:my )?(?:personal )?data", "data_export_portability"),
     (r"portable format", "data_portability_format"),
     # Marketing opt-out only
     (r"remove me from marketing lists only", "marketing_opt_out_only"),

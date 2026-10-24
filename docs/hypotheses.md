@@ -172,4 +172,44 @@ This document tracks hypotheses, investigation paths, and validation outcomes fo
 3. **Validation**:
    - Evaluated across all 518 cases: exactly 0 differences in anchor assignments occur when mutating `reported_status`, satisfying Property A while retaining 100% accuracy on sample anchors.
 
+## Phase 6 Hypothesis 7: Safe Handling of Unresolvable Request Identities
+
+### Hypothesis Formulation
+1. **Unresolvable Request Identity Handling**:
+   - When an incoming request email is not present in `user_identities.csv` or `user_audit_log.csv` (e.g. external inquiry, typo, or similar-email decoy `x.jr@` vs `x@`), `IdentityResolver.resolve()` raises `UnresolvedIdentityError`.
+   - Failing to catch this exception in `Linker.link_cases()` causes an uncaught crash instead of producing an unlinked case with 0 attributed resources.
+2. **Defensive Linkage Handling**:
+   - In `Linker.link_cases()`, catching identity resolution failures gracefully assigns `identity = None` and `user_id = ""`.
+   - The resulting case has 0 hard signals, 0 soft signals, and 0 attributed resources.
+   - The planner then emits a clean empty plan with 0 steps, preventing false-positive attribution and ensuring decoy isolation.
+3. **Re-measurement Plan**:
+   - Verify Custom Case 3 passes cleanly.
+   - Run full 58/58 unit tests and 7/7 metamorphic tests to confirm 0 regressions on all 518 cases.
+
+## Phase 6 Hypothesis 8: Multilingual Negation in Intent Classification
+
+### Hypothesis Formulation
+1. **Multilingual Negation Omission**:
+   - `NON_DELETION_PATTERNS` in `ghost_audit.intent` contained English negation patterns (`do not delete`, `don't delete`), but lacked non-English negation patterns (Portuguese `não quero apagar`, Spanish `no deseo borrar`, French `ne pas supprimer`, German `nicht löschen`, Korean `삭제하지 마세요`).
+   - Consequently, when a non-English request states "I do not want to delete my account" (e.g. Portuguese `Não quero apagar minha conta`), the affirmative deletion pattern `apagar` triggers, falsely classifying a non-deletion request as `DELETION`.
+2. **Targeted Edit**:
+   - Add multilingual negation patterns to `NON_DELETION_PATTERNS` covering Portuguese, Spanish, French, German, and Korean negation of deletion verbs.
+3. **Re-measurement**:
+   - Custom Case 6 must evaluate to `NOT_APPLICABLE` with `steps == []`.
+   - Sample cases and 518 cases must retain 100% agreement.
+
+## Phase 6 Hypothesis 9: Hard Rule Target Resource Invariant for S7/S8 Exceptions
+
+### Hypothesis Formulation
+1. **Target Resource Category Invariant**:
+   - Under the problem statement Hard Rule, S7/S8 signals may only attach a deleted account (`account_`) or an anonymized analytics record (`analytics_`).
+   - In `code/ghost_audit/linker/graph.py`, `has_exception` was evaluated solely on `s.signal_name in EXCEPTION_SIGNAL_NAMES` without asserting `r_id.startswith("account_")` or `r_id.startswith("analytics_")`.
+   - If an anomalous weak signal attaches to another system (e.g. `search_` or `backup_`), it was erroneously permitted through the exception.
+2. **Targeted Edit**:
+   - In `graph.py`, gate `has_exception` by verifying that the candidate resource prefix matches the exception type:
+     `account_` for `S7_ACCOUNT_ANCHOR` / `S8_TUTORIAL_ACCOUNT`, and `analytics_` for `S8_ANON_ANALYTICS` / `S8_TUTORIAL_ANALYTICS`.
+3. **Re-measurement**:
+   - Custom Case 10 must pass (non-account resource with S7 signal is excluded and logged as unattributed).
+   - Sample cases and 518 cases must retain 100% attribution.
+
 

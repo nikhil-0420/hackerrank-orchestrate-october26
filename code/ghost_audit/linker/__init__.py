@@ -75,17 +75,24 @@ class Linker:
         # 1. Collect S1-S6 hard signals for each case
         for cid, req in requests.items():
             req_email = req["email"].lower().strip()
-            ident = self.resolver.resolve(req_email)
-            h_signals = collect_hard_signals_for_case(
-                case_id=cid,
-                requested_at=req["requested_at"],
-                audit_at=req["audit_at"],
-                identity=ident,
-                all_observations=self.observations,
-                activity=self.activity,
-                obs_by_res=self.obs_by_res,
-                documents_dir=documents_dir,
-            )
+            try:
+                ident = self.resolver.resolve(req_email)
+            except Exception:
+                ident = None
+
+            if ident:
+                h_signals = collect_hard_signals_for_case(
+                    case_id=cid,
+                    requested_at=req["requested_at"],
+                    audit_at=req["audit_at"],
+                    identity=ident,
+                    all_observations=self.observations,
+                    activity=self.activity,
+                    obs_by_res=self.obs_by_res,
+                    documents_dir=documents_dir,
+                )
+            else:
+                h_signals = []
             case_hard_signals[cid] = h_signals
             case_hard_resources[cid] = {s.resource_id for s in h_signals}
 
@@ -112,7 +119,13 @@ class Linker:
         # 4. Assemble CaseLinkage per case with HARD RULE enforcement
         linkages: Dict[str, CaseLinkage] = {}
         for cid, req in requests.items():
-            ident = self.resolver.resolve(req["email"])
+            try:
+                ident = self.resolver.resolve(req["email"])
+                user_id = ident.user_id
+            except Exception:
+                ident = None
+                user_id = ""
+
             all_case_signals: List[Signal] = []
             all_case_signals.extend(case_hard_signals.get(cid, []))
             all_case_signals.extend(case_anchor_signals.get(cid, []))
@@ -120,7 +133,7 @@ class Linker:
 
             linkage = build_case_attribution_graph(
                 case_id=cid,
-                user_id=ident.user_id,
+                user_id=user_id,
                 email=req["email"],
                 audit_at=req["audit_at"],
                 all_signals=all_case_signals,

@@ -153,7 +153,15 @@ def build_case_attribution_graph(
     for r_id in sorted(signals_by_res.keys()):
         r_signals = signals_by_res[r_id]
         has_hard = any(s.signal_name in HARD_SIGNAL_NAMES for s in r_signals)
-        has_exception = any(s.signal_name in EXCEPTION_SIGNAL_NAMES for s in r_signals)
+        has_account_exception = (
+            r_id.startswith("account_")
+            and any(s.signal_name in ("S7_ACCOUNT_ANCHOR", "S8_TUTORIAL_ACCOUNT") for s in r_signals)
+        )
+        has_analytics_exception = (
+            r_id.startswith("analytics_")
+            and any(s.signal_name in ("S8_ANON_ANALYTICS", "S8_TUTORIAL_ANALYTICS") for s in r_signals)
+        )
+        has_exception = has_account_exception or has_analytics_exception
 
         sys_id = None
         for s in r_signals:

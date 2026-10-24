@@ -16,13 +16,15 @@ class EvidenceFileMeta:
 
 def load_manifest(manifest_path: Path = MANIFEST_PATH) -> List[EvidenceFileMeta]:
     """Load the evidence_files.csv manifest into a list of metadata objects."""
+    dataset_root = manifest_path.parent if manifest_path else DATASET_DIR
     records = []
     with open(manifest_path, "r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
             rel = row["file_path"].strip()
-            # relative to dataset dir if path starts with evidence/
-            abs_p = (DATASET_DIR / rel).resolve()
+            abs_p = (dataset_root / rel).resolve()
+            if not abs_p.exists() and (DATASET_DIR / rel).exists():
+                abs_p = (DATASET_DIR / rel).resolve()
             records.append(
                 EvidenceFileMeta(
                     file_id=row["file_id"].strip(),

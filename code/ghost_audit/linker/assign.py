@@ -108,6 +108,12 @@ def assign_account_anchors(
 
     # S7: Phase 1 - Tutorial cases (window [-10 min, +10 min])
     for cid, req in requests.items():
+        try:
+            ident = resolver.resolve(req["email"])
+        except Exception:
+            ident = None
+        if not ident:
+            continue
         rep_dt = parse_iso(req["reported_at"])
         is_tutorial = not req["reported_at"].endswith(":00:00Z")
         if is_tutorial:
@@ -137,8 +143,13 @@ def assign_account_anchors(
     for cid, req in requests.items():
         if cid in case_anchor_assigned:
             continue
+        try:
+            ident = resolver.resolve(req["email"])
+        except Exception:
+            ident = None
+        if not ident:
+            continue
         rep_dt = parse_iso(req["reported_at"])
-        ident = resolver.resolve(req["email"])
         cands = []
         for r in dw_account_rows:
             if r.resource_id in assigned_anchors:
@@ -197,14 +208,23 @@ def assign_account_anchors(
                 continue
             dt = parse_iso(r.event_time)
             delta = (dt - rep_dt).total_seconds() / 60.0
-            is_tut = any(int(c.split('_')[1]) <= 10 for c in cids)
+            is_tut = any(
+                not requests[c]["reported_at"].endswith(":00:00Z")
+                or (len(c.split('_')) > 1 and c.split('_')[1].isdigit() and int(c.split('_')[1]) <= 10)
+                for c in cids
+            )
             w_min, w_max = TUTORIAL_WINDOW_MIN if is_tut else STANDARD_WINDOW_MIN
             if w_min <= delta <= w_max:
                 batch_anchors.append(r)
 
         pair_scores = []
         for cid in cids:
-            ident = resolver.resolve(requests[cid]["email"])
+            try:
+                ident = resolver.resolve(requests[cid]["email"])
+            except Exception:
+                ident = None
+            if not ident:
+                continue
             hard_res = case_hard_resources.get(cid, set())
             hard_files = set()
             for hr in hard_res:
@@ -287,22 +307,31 @@ def assign_activity_chain_resources(
     ]
 
     for cid, req in requests.items():
+        try:
+            ident = resolver.resolve(req["email"])
+        except Exception:
+            ident = None
+        if not ident:
+            continue
         is_tutorial = not req["reported_at"].endswith(":00:00Z")
         if is_tutorial:
-            ident = resolver.resolve(req["email"])
-            m = re.match(r"user_(\d+)", ident.user_id)
-            if m:
-                u_num = int(m.group(1))
-                tut_acc = f"account_{u_num:03d}"
-                case_s8_signals[cid].append(
-                    Signal(
-                        tut_acc,
-                        "S8_TUTORIAL_ACCOUNT",
-                        f"pattern:user_{u_num}->account_{u_num:03d}",
-                        0.60,
-                        "account_service",
+            try:
+                ident = resolver.resolve(req["email"])
+                m = re.match(r"user_(\d+)", ident.user_id)
+                if m:
+                    u_num = int(m.group(1))
+                    tut_acc = f"account_{u_num:03d}"
+                    case_s8_signals[cid].append(
+                        Signal(
+                            tut_acc,
+                            "S8_TUTORIAL_ACCOUNT",
+                            f"pattern:user_{u_num}->account_{u_num:03d}",
+                            0.60,
+                            "account_service",
+                        )
                     )
-                )
+            except Exception:
+                pass
 
             rep_dt = parse_iso(req["reported_at"])
             for ev in activity.rows:

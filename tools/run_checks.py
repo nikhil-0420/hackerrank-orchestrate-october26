@@ -137,6 +137,10 @@ def main() -> None:
             ],
         ),
         (
+            "Custom Policy Cases: custom_cases.py",
+            [sys.executable, "code/evaluation/custom_cases.py"],
+        ),
+        (
             "Log Integrity: check_log.py",
             [sys.executable, "tools/check_log.py"],
         ),
