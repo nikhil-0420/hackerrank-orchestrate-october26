@@ -161,6 +161,8 @@ OPERATION_TO_STATE: Final[dict[str, str]] = {
     op: state for _, op, state, _ in OPERATION_TABLE
 }
 
+ALLOWED_OPERATIONS: Final[set[str]] = set(OPERATION_TO_STATE.keys())
+
 # Within-phase operation ordering index (1-based relative to problem_statement.md table order)
 OPERATION_ORDER_WITHIN_PHASE: Final[dict[str, int]] = {
     # FINDING
