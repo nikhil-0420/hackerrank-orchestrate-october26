@@ -100,6 +100,10 @@ def main() -> None:
             [sys.executable, "-m", "unittest", "tests/test_citation.py"],
         ),
         (
+            "Unit Tests: LLM Bounded Subsystem",
+            [sys.executable, "-m", "unittest", "tests/test_llm.py"],
+        ),
+        (
             "Validation: Sample Ground Truth",
             [
                 sys.executable,

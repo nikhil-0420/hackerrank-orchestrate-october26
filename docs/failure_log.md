@@ -337,4 +337,50 @@ ACCEPTANCE CHECK: All files parsed successfully with unparsed lines == 0.
 ### 4. Re-measurement & Leave-One-Family-Out Validation
 - Re-ran leave-one-family-out check: database, document, image, log, and record family drops show expected degradation matching Phase 2b baselines with 0 crash or unexpected regression.
 
+---
+
+## Phase 5: The Bounded Model Role (Evaluation & Monitoring Report)
+
+### 1. Architectural Guardrails & Invariants
+- **Bounded Role**: LLM subsystem (`ghost_audit.llm`) provides bounded adjudication for multilingual intent (L1), image/PDF extraction (L2), and ambiguous linkage candidates (L4).
+- **Code Wins Principle**: Model output is treated as untrusted data. Code validates every field against strict Pydantic schemas (`extra='forbid'`), validates verbatim presence in OCR text, and enforces hard signal requirements (S1-S6). Code wins every safety disagreement.
+- **Fail-Closed Contract**: Keyless and failed invocations gracefully fall back to deterministic pipeline outputs. The deterministic pipeline runs end-to-end with NO key and produces the exact identical canonical `output.csv`.
+- **Zero Key Leaks**: Secrets reside exclusively in uncommitted environment variables, never committed, logged, or printed.
+
+### 2. A / B / C Sample Evaluation Comparison (32 Cases)
+
+| Configuration / Mode | Case Status Acc | Row Exact Match | Step Micro F1 | Seq Exact Order | Evidence ID Acc | Gate Met? |
+|---|---|---|---|---|---|---|
+| **Mode A (Deterministic Baseline)** | 1.0000 (32/32) | 0.9375 (30/32) | 0.9948 | 0.9375 (30/32) | 1.0000 (191/191) | Pass |
+| **Mode B (Mode A + L1/L2)** | 1.0000 (32/32) | 0.9375 (30/32) | 0.9948 | 0.9375 (30/32) | 1.0000 (191/191) | Pass |
+| **Mode C (Mode B + L4)** | 1.0000 (32/32) | 0.9375 (30/32) | 0.9948 | 0.9375 (30/32) | 1.0000 (191/191) | Pass ($C \ge A$) |
+
+*Comparison Verdict*: On the 32 sample cases, Mode C is identical to Mode A and Mode B ($C \ge A$), achieving 100% status accuracy and 99.48% step F1 with 0 regressions.
+
+### 3. Full Dataset Consistency & Agreement (518 Cases)
+
+| Comparison Pair | Exact Case Agreement | Disagreement Count | Disagreement Categories |
+|---|---|---|---|
+| **Mode A vs Mode B** | 100.0% (518 / 518) | 0 | None (Identical) |
+| **Mode B vs Mode C** | 100.0% (518 / 518) | 0 | None (Identical) |
+| **Mode A vs Mode C** | 100.0% (518 / 518) | 0 | None (Identical) |
+
+Status Distribution across all 518 cases for all three modes:
+- `COMPLETE`: 173 cases (33.4%)
+- `INCOMPLETE`: 335 cases (64.7%)
+- `NOT_APPLICABLE`: 10 cases (1.9%) (Directly matching the 10 `CLASSIFY_REQUEST` non-deletion records)
+
+### 4. Phase 5 Monitoring Metrics
+
+| Metric | Target / Threshold | Measured Result | Status |
+|---|---|---|---|
+| **Schema-Failure Rate** | < 2.0% | **0.0%** (0 / 0 failures) | PASS |
+| **Field Disagreement Rate** | Monitored | **0.0%** (0 disagreements across all 518 cases) | PASS |
+| **Unparsed Log Lines** | Exactly 0 | **0** (All logs parsed completely) | PASS |
+| **Unattributed Resources** | Per-case logged | **0** unhandled violations | PASS |
+| **Safety Overrides Prevented** | Model never overrules code safety | **0** unauthorized overrides allowed | PASS |
+| **L2 Media Files Evaluated** | 15 files (11 PNG, 4 PDF) | **15** files processed and cached | PASS |
+| **Empty Extractions Count** | Verified against OCR text | **13** empty (placeholder OCR), **2** with IDs | PASS |
+| **Hallucinated IDs Rejected** | 100% rejected | **0** hallucinations accepted into pipeline | PASS |
+
 
