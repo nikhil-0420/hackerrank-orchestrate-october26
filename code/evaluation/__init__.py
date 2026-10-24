@@ -1,0 +1,3 @@
+"""
+Ghost Audit evaluation package.
+"""
