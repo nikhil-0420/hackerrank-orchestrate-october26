@@ -25,6 +25,9 @@ def _parse_iso(ts: str) -> datetime:
     return dt
 
 
+parse_iso_ts = _parse_iso
+
+
 def visible_state(obs: Observation, audit_at: str) -> bool:
     """
     Check if the observation state was observed at or before audit_at cutoff.
