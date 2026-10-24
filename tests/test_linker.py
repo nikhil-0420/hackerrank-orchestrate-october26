@@ -142,7 +142,117 @@ class TestLinkerSignals(unittest.TestCase):
         self.assertIn("support_101", attributed_ids)
         self.assertNotIn("support_102", attributed_ids)
 
-    def test_s5_chain_keys_one_hop(self):
+    def test_s3_merged_trace_synthetic(self):
+        """Synthetic test: S3 merged trace linking via trace_id in state or trace: in raw_ref."""
+        obs_with_trace = Observation(
+            file_id="ev_trace_01",
+            file_captured_at="2026-09-10T12:00:00Z",
+            obs_time="2026-09-05T12:00:00Z",
+            system_id="support_platform",
+            collection="tickets",
+            resource_id="support_301",
+            identifiers=Identifiers(email="alice@example.com"),
+            state={"trace_id": "tr-998877", "ticket_id": "CS-301"},
+            source_kind="log",
+            raw_ref="trace:tr-998877:line_42",
+        )
+        obs_decoy_trace = Observation(
+            file_id="ev_trace_01",
+            file_captured_at="2026-09-10T12:00:00Z",
+            obs_time="2026-09-05T12:00:00Z",
+            system_id="support_platform",
+            collection="tickets",
+            resource_id="support_302",
+            identifiers=Identifiers(email="bob@example.com"),
+            state={"trace_id": "tr-112233", "ticket_id": "CS-302"},
+            source_kind="log",
+            raw_ref="trace:tr-112233:line_55",
+        )
+        obs_by_res = {
+            "support_301": [obs_with_trace],
+            "support_302": [obs_decoy_trace],
+        }
+        activity = ActivityLog([])
+
+        signals = collect_hard_signals_for_case(
+            case_id="case_t_s3",
+            requested_at=self.requested_at,
+            audit_at=self.audit_at,
+            identity=self.ident,
+            all_observations=[obs_with_trace, obs_decoy_trace],
+            activity=activity,
+            obs_by_res=obs_by_res,
+        )
+
+        s3_signals = [s for s in signals if s.signal_name == "S3_MERGED_TRACE"]
+        self.assertTrue(len(s3_signals) >= 1)
+        self.assertEqual(s3_signals[0].resource_id, "support_301")
+        self.assertEqual(s3_signals[0].strength, 0.90)
+
+        # Ensure decoy trace with non-matching email is not attributed
+        attributed_ids = {s.resource_id for s in signals}
+        self.assertNotIn("support_302", attributed_ids)
+
+    def test_s4_link_row_synthetic(self):
+        """Synthetic test: S4 LINK_RESOURCE_IDENTITY operational activity rows."""
+        row_matching = SystemActivityRow(
+            activity_id="act_4001",
+            event_time="2026-09-05T10:00:00Z",
+            event_type="LINK_RESOURCE_IDENTITY",
+            source_system="data_catalog",
+            target_system="analytics_platform",
+            resource_id="analytics_404",
+            reported_result="SUCCESS",
+            details="Data catalog linked analytics_404 (analytics_404) to alice@example.com and user_101.",
+        )
+        row_unrelated = SystemActivityRow(
+            activity_id="act_4002",
+            event_time="2026-09-05T10:00:00Z",
+            event_type="LINK_RESOURCE_IDENTITY",
+            source_system="data_catalog",
+            target_system="export_service",
+            resource_id="export_999",
+            reported_result="SUCCESS",
+            details="Data catalog linked export_999 (export_999) to charlie@example.com and user_999.",
+        )
+        activity = ActivityLog([row_matching, row_unrelated])
+        obs_by_res = {
+            "analytics_404": [
+                Observation(
+                    file_id="ev_01",
+                    file_captured_at="2026-09-10T12:00:00Z",
+                    obs_time="2026-09-05T10:00:00Z",
+                    system_id="analytics_platform",
+                    collection="reports",
+                    resource_id="analytics_404",
+                    identifiers=Identifiers(),
+                    state={},
+                    source_kind="json",
+                    raw_ref="idx:0",
+                )
+            ]
+        }
+
+        signals = collect_hard_signals_for_case(
+            case_id="case_t_s4",
+            requested_at=self.requested_at,
+            audit_at=self.audit_at,
+            identity=self.ident,
+            all_observations=obs_by_res["analytics_404"],
+            activity=activity,
+            obs_by_res=obs_by_res,
+        )
+
+        s4_signals = [s for s in signals if s.signal_name == "S4_LINK_ROW"]
+        self.assertEqual(len(s4_signals), 1)
+        self.assertEqual(s4_signals[0].resource_id, "analytics_404")
+        self.assertEqual(s4_signals[0].strength, 0.85)
+
+        attributed_ids = {s.resource_id for s in signals}
+        self.assertNotIn("export_999", attributed_ids)
+
+    def test_s5_chain_keys_synthetic(self):
+        """Synthetic test: S5 chain key 1-hop traversal across object_key, archive_key, and parent_resource_id."""
         obs_root = Observation(
             file_id="ev_01",
             file_captured_at="2026-09-10T12:00:00Z",
@@ -151,7 +261,12 @@ class TestLinkerSignals(unittest.TestCase):
             collection="jobs",
             resource_id="export_501",
             identifiers=Identifiers(email="alice@example.com"),
-            state={"source_resource_id": "account_999"},
+            state={
+                "source_resource_id": "account_999",
+                "archive_key": "archive/customer-data/backup_888.tar.zst",
+                "object_key": "exports/user_data/export_777.csv",
+                "parent_resource_id": "support_666",
+            },
             source_kind="json",
             raw_ref="idx:0",
         )
@@ -159,7 +274,7 @@ class TestLinkerSignals(unittest.TestCase):
         activity = ActivityLog([])
 
         signals = collect_hard_signals_for_case(
-            case_id="case_t3",
+            case_id="case_t_s5",
             requested_at=self.requested_at,
             audit_at=self.audit_at,
             identity=self.ident,
@@ -168,9 +283,17 @@ class TestLinkerSignals(unittest.TestCase):
             obs_by_res=obs_by_res,
         )
 
-        attributed_ids = {s.resource_id for s in signals}
-        self.assertIn("export_501", attributed_ids)
-        self.assertIn("account_999", attributed_ids)
+        s5_signals = [s for s in signals if s.signal_name == "S5_CHAIN_KEY"]
+        s5_res_ids = {s.resource_id for s in s5_signals}
+
+        # S5 traverses all 4 linked resource keys
+        self.assertIn("account_999", s5_res_ids)
+        self.assertIn("backup_888", s5_res_ids)
+        self.assertIn("export_777", s5_res_ids)
+        self.assertIn("support_666", s5_res_ids)
+        for s in s5_signals:
+            self.assertEqual(s.strength, 0.80)
+
 
 
 class TestLinkerAssignment(unittest.TestCase):

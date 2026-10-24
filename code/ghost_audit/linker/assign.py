@@ -61,7 +61,7 @@ def status_matches_result(req_status: str, rep_result: str) -> bool:
     if req_status == "NOT_STARTED":
         return rep_result == "FAILED"
     if req_status == "PARTIALLY_COMPLETE":
-        return rep_result in ("PARTIAL", "SUCCESS", "FAILED")
+        return rep_result == "PARTIAL"
     return True
 
 
@@ -84,6 +84,11 @@ def assign_account_anchors(
     case_anchor_signals: Dict[str, List[Signal]] = defaultdict(list)
     unattributed_anchor_logs: List[Tuple[str, str, List[str]]] = []
     assigned_anchors: Set[str] = set()
+
+    files_by_res: Dict[str, Set[str]] = defaultdict(set)
+    for o in all_observations:
+        if o.file_id:
+            files_by_res[o.resource_id].add(o.file_id)
 
     # Precompute resource -> user mapping from evidence
     acc_identity: Dict[str, Tuple[Optional[str], Optional[str]]] = {}
@@ -145,7 +150,7 @@ def assign_account_anchors(
 
         for c in cands:
             r_id = c.resource_id
-            if r_id in case_hard_resources[cid]:
+            if r_id in case_hard_resources.get(cid, set()):
                 case_anchor_assigned[cid] = r_id
                 assigned_anchors.add(r_id)
                 case_anchor_signals[cid].append(
@@ -178,7 +183,7 @@ def assign_account_anchors(
                     )
                     break
 
-    # S7 & S8: Phase 3 - Disambiguation by reported_result & downstream activity
+    # S7 & S8: Phase 3 - Decoupled bipartite assignment by file co-occurrence & downstream schedule offsets
     cases_by_time: Dict[str, List[str]] = defaultdict(list)
     for cid, req in requests.items():
         if cid not in case_anchor_assigned:
@@ -192,70 +197,66 @@ def assign_account_anchors(
                 continue
             dt = parse_iso(r.event_time)
             delta = (dt - rep_dt).total_seconds() / 60.0
-            if STANDARD_WINDOW_MIN[0] <= delta <= STANDARD_WINDOW_MIN[1]:
+            is_tut = any(int(c.split('_')[1]) <= 10 for c in cids)
+            w_min, w_max = TUTORIAL_WINDOW_MIN if is_tut else STANDARD_WINDOW_MIN
+            if w_min <= delta <= w_max:
                 batch_anchors.append(r)
 
-        batch_anchors.sort(key=lambda r: parse_iso(r.event_time))
+        pair_scores = []
+        for cid in cids:
+            ident = resolver.resolve(requests[cid]["email"])
+            hard_res = case_hard_resources.get(cid, set())
+            hard_files = set()
+            for hr in hard_res:
+                hard_files.update(files_by_res.get(hr, set()))
 
-        for cid in list(cids):
-            req = requests[cid]
-            ident = resolver.resolve(req["email"])
-            req_stat = req["reported_status"]
-            hard_res = case_hard_resources[cid]
-
-            # Eliminate any anchor whose identity is known to belong to someone else
-            compatible = []
             for a in batch_anchors:
-                if a.resource_id in assigned_anchors:
-                    continue
-                if not status_matches_result(req_stat, a.reported_result):
-                    continue
                 if a.resource_id in acc_identity:
                     cu, cem = acc_identity[a.resource_id]
                     if (cu and cu != ident.user_id) or (cem and cem not in ident.emails):
                         continue
-                for obs in obs_by_res.get(a.resource_id, []):
-                    if obs.identifiers:
-                        if obs.identifiers.email and obs.identifiers.email.lower().strip() not in ident.emails:
-                            continue
-                compatible.append(a)
-
-            scored_compatible = []
-            for a in compatible:
-                a_dt = parse_iso(a.event_time)
                 score = 0.0
+                a_files = files_by_res.get(a.resource_id, set())
+                if a_files & hard_files:
+                    score += 40.0
+
+                a_dt = parse_iso(a.event_time)
                 for ev in activity.rows:
                     if ev.source_system == "deletion_worker" and ev.target_system != "account_service":
                         ev_dt = parse_iso(ev.event_time)
                         delta_m = (ev_dt - a_dt).total_seconds() / 60.0
-                        if 0 < delta_m <= 180.0:
-                            if ev.resource_id in hard_res:
-                                score += 10.0
-                                # S8 schedule offset bonus
-                                if matches_known_offset(ev.target_system, delta_m, tol=1.5):
-                                    score += 20.0
-                scored_compatible.append((score, a))
+                        if 0 < delta_m <= 180.0 and ev.resource_id in hard_res:
+                            if matches_known_offset(ev.target_system, delta_m, tol=1.5):
+                                score += 50.0
+                            else:
+                                score += 1.0
+                pair_scores.append((score, cid, a))
 
-            if scored_compatible:
-                scored_compatible.sort(key=lambda x: (-x[0], parse_iso(x[1].event_time)))
-                best_anchor = scored_compatible[0][1]
-                case_anchor_assigned[cid] = best_anchor.resource_id
-                assigned_anchors.add(best_anchor.resource_id)
+        pair_scores.sort(key=lambda x: (-x[0], parse_iso(x[2].event_time)))
+
+        cids_remaining = set(cids)
+        for score, cid, a in pair_scores:
+            if cid in cids_remaining and a.resource_id not in assigned_anchors:
+                case_anchor_assigned[cid] = a.resource_id
+                assigned_anchors.add(a.resource_id)
                 case_anchor_signals[cid].append(
                     Signal(
-                        best_anchor.resource_id,
+                        a.resource_id,
                         "S7_ACCOUNT_ANCHOR",
-                        f"system_activity:{best_anchor.activity_id}",
+                        f"system_activity:{a.activity_id}",
                         0.70,
                         "account_service",
-                        obs_time=best_anchor.event_time,
-                        metadata={"reported_result": best_anchor.reported_result, "score": scored_compatible[0][0]},
+                        obs_time=a.event_time,
+                        metadata={"reported_result": a.reported_result, "score": score},
                     )
                 )
-            else:
-                unattributed_anchor_logs.append((cid, "no_compatible_anchor", [a.resource_id for a in batch_anchors]))
+                cids_remaining.remove(cid)
+
+        for cid in cids_remaining:
+            unattributed_anchor_logs.append((cid, "no_compatible_anchor", [a.resource_id for a in batch_anchors]))
 
     return case_anchor_assigned, case_anchor_signals, unattributed_anchor_logs
+
 
 
 def assign_activity_chain_resources(

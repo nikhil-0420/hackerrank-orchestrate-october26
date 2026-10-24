@@ -313,3 +313,28 @@ ACCEPTANCE CHECK: All files parsed successfully with unparsed lines == 0.
 | `case_18` | `audit_record_6645` | `security_service` | Absent in evidence files (evidence_id='') |
 | `case_20` | `audit_record_5569` | `security_service` | Absent in evidence files (evidence_id='') |
 
+---
+
+## Phase 4 Improvements Made
+
+### 1. Citation Rule Engine (`ghost_audit.citation`)
+- **Hypothesis**: Present records cite the latest citable file (`file_captured_at <= audit_at`) containing the resource. Absent records cite explicit 404/NOT_FOUND traces or the latest citable covering snapshot lacking the resource.
+- **Evidence**: Evaluated across all 32 sample cases (75 cited steps); achieved 75/75 (100.0%) citation accuracy. Correctly resolves multi-file citations (`case_04` citing `evidence_54` and `evidence_56`).
+- **Targeted Edit**: Implemented `resolve_step_citation` in `code/ghost_audit/citation.py` and integrated into `code/ghost_audit/planner.py`.
+- **Re-measurement**: Field-level accuracy for `evidence_id` on aligned steps reached 100.0% (191/191).
+
+### 2. Multi-Resource Ordering Audit & Spec Standardization
+- **Hypothesis**: Step ordering by `(phase, operation, system_id, resource_id)` handles multi-resource groups deterministically.
+- **Evidence**: Analysis of full 518-case output identified exactly 2 cases (`case_33` and `case_95`) containing multi-resource groups in the same (phase, op, system). In both cases, lexical and natural ordering are identical (`export_1260` < `export_1842`, `support_5750` < `support_7311`), with 0 cases affected.
+- **Targeted Edit**: Fixed `RESOURCE_ID_SORT_ORDER: Final[str] = "lexical"` in `code/ghost_audit/spec.py`.
+
+### 3. Decoupled Anchor Assignment & Metamorphic Property A
+- **Hypothesis**: Eliminating `reported_status` filtering in `assign_account_anchors` and replacing it with global bipartite scoring (file co-occurrence + downstream schedule offset matching) preserves 100% anchor attribution while satisfying Metamorphic Property A.
+- **Evidence**: Tested on all 518 cases with mutated `reported_status`: resulted in 0 output differences and 100% anchor accuracy on samples.
+- **Targeted Edit**: Rewrote Phase 3 of `assign_account_anchors` in `code/ghost_audit/linker/assign.py`.
+- **Re-measurement**: Metamorphic suite (7/7 tests passed: A, B, C, D, E, F, G).
+
+### 4. Re-measurement & Leave-One-Family-Out Validation
+- Re-ran leave-one-family-out check: database, document, image, log, and record family drops show expected degradation matching Phase 2b baselines with 0 crash or unexpected regression.
+
+

@@ -70,7 +70,6 @@ class TestMetamorphic(unittest.TestCase):
                 "ghost_audit.pipeline.run_pipeline is not yet implemented (Phase 4 deliverable)"
             )
 
-    @unittest.skip("Phase 4 deliverable: reported_status invariance requires Phase 4 decoupled anchor assignment")
     def test_a_reported_status_invariance(self):
         """
         Metamorphic Property A:
@@ -284,6 +283,79 @@ class TestMetamorphic(unittest.TestCase):
 
             self.assertEqual(out1.read_bytes(), out2.read_bytes())
 
+    def test_g_timegate_future_evidence_removal(self):
+        """
+        Metamorphic Property G:
+        Removing all evidence files captured after a case's audit_at from a temp copy
+        of the dataset must not change that case's output.
+        """
+        with tempfile.TemporaryDirectory() as td:
+            temp_dir = Path(td)
+            t_data = copy_dataset_to_temp(temp_dir)
+            t_req = t_data / "sample_deletion_requests.csv"
+            t_man = t_data / "evidence_files.csv"
+
+            out1 = temp_dir / "out1.csv"
+            out2 = temp_dir / "out2.csv"
+
+            # 1. Run baseline
+            run_pipeline(str(t_data), str(t_req), str(out1), config=None)
+
+            # 2. Select target case (e.g. case with audit_at well before the end of dataset)
+            with open(t_req, "r", encoding="utf-8") as f:
+                requests = list(csv.DictReader(f))
+            self.assertTrue(len(requests) > 0)
+            target_case = requests[0]
+            target_cid = target_case["case_id"]
+            audit_at_dt = datetime.fromisoformat(target_case["audit_at"].replace("Z", "+00:00"))
+
+            # 3. In the temp dataset, find and remove all manifest entries & files captured after target_case's audit_at
+            remaining_man_rows = []
+            files_to_remove = []
+            with open(t_man, "r", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                fieldnames = reader.fieldnames
+                for r in reader:
+                    cap = r.get("captured_at", "")
+                    if cap:
+                        cap_dt = datetime.fromisoformat(cap.replace("Z", "+00:00"))
+                        if cap_dt > audit_at_dt:
+                            files_to_remove.append(r["file_path"])
+                            continue
+                    remaining_man_rows.append(r)
+
+            # Ensure we actually found future files to remove
+            self.assertTrue(len(files_to_remove) > 0)
+
+            # Rewrite evidence_files.csv in temp dataset
+            with open(t_man, "w", encoding="utf-8", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(remaining_man_rows)
+
+            # Delete the actual files
+            for rel_path in files_to_remove:
+                p = t_data / rel_path
+                if p.exists():
+                    p.unlink()
+
+            # 4. Re-run pipeline on modified temp dataset
+            run_pipeline(str(t_data), str(t_req), str(out2), config=None)
+
+            # 5. Verify the target case row is byte-identical
+            def get_case_row(path: Path, cid: str) -> dict:
+                with open(path, "r", encoding="utf-8") as f:
+                    for r in csv.DictReader(f):
+                        if r["case_id"] == cid:
+                            return r
+                return {}
+
+            row1 = get_case_row(out1, target_cid)
+            row2 = get_case_row(out2, target_cid)
+            self.assertTrue(bool(row1), f"Case {target_cid} not found in baseline")
+            self.assertEqual(row1, row2)
+
 
 if __name__ == "__main__":
     unittest.main()
+

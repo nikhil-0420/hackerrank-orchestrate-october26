@@ -14,14 +14,40 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import time
+from typing import Optional, Tuple
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
-def run_step(name: str, cmd: list[str], env: dict[str, str]) -> tuple[bool, float, str]:
+def parse_test_counts(output: str) -> Optional[Tuple[int, int, int]]:
+    """
+    Parse (passed, skipped, failed) counts from unittest output.
+    Returns None if output does not contain unittest results.
+    """
+    m_ran = re.search(r"Ran (\d+) tests? in", output)
+    if not m_ran:
+        return None
+    total = int(m_ran.group(1))
+
+    m_skip = re.search(r"skipped=(\d+)", output)
+    skipped = int(m_skip.group(1)) if m_skip else 0
+
+    m_fail = re.search(r"failures=(\d+)", output)
+    failures = int(m_fail.group(1)) if m_fail else 0
+
+    m_err = re.search(r"errors=(\d+)", output)
+    errors = int(m_err.group(1)) if m_err else 0
+
+    failed = failures + errors
+    passed = max(0, total - skipped - failed)
+    return passed, skipped, failed
+
+
+def run_step(name: str, cmd: list[str], env: dict[str, str]) -> tuple[bool, float, str, Optional[Tuple[int, int, int]]]:
     start = time.time()
     try:
         proc = subprocess.run(
@@ -35,10 +61,11 @@ def run_step(name: str, cmd: list[str], env: dict[str, str]) -> tuple[bool, floa
         duration = time.time() - start
         output = (proc.stdout + "\n" + proc.stderr).strip()
         success = proc.returncode == 0
-        return success, duration, output
+        counts = parse_test_counts(output)
+        return success, duration, output, counts
     except Exception as e:
         duration = time.time() - start
-        return False, duration, f"Exception during execution: {e}"
+        return False, duration, f"Exception during execution: {e}", None
 
 
 def main() -> None:
@@ -63,6 +90,14 @@ def main() -> None:
         (
             "Scaffold Tests: Metamorphic Properties",
             [sys.executable, "-m", "unittest", "tests/test_metamorphic.py"],
+        ),
+        (
+            "Unit Tests: Linker & Signals (S1-S8)",
+            [sys.executable, "-m", "unittest", "tests/test_linker.py"],
+        ),
+        (
+            "Unit Tests: Citation Engine",
+            [sys.executable, "-m", "unittest", "tests/test_citation.py"],
         ),
         (
             "Validation: Sample Ground Truth",
@@ -103,32 +138,46 @@ def main() -> None:
         ),
     ]
 
-    print("================================================================================")
+    print("==========================================================================================")
     print("RUNNING GHOST AUDIT INTEGRATION CHECKS")
-    print("================================================================================\n")
+    print("==========================================================================================\n")
 
     results = []
     overall_success = True
 
     for name, cmd in steps:
         print(f"[*] Running: {name} ...")
-        success, duration, output = run_step(name, cmd, env)
+        success, duration, output, counts = run_step(name, cmd, env)
         status_str = "PASS" if success else "FAIL"
-        results.append((name, status_str, duration, output))
+        results.append((name, status_str, duration, counts, output))
         if not success:
             overall_success = False
-            print(f"    -> FAILED in {duration:.2f}s:\n{output}\n")
+            count_info = f" [passed={counts[0]}, skipped={counts[1]}, failed={counts[2]}]" if counts else ""
+            print(f"    -> FAILED in {duration:.2f}s{count_info}:\n{output}\n")
         else:
-            print(f"    -> PASSED ({duration:.2f}s)")
+            count_info = f" [passed={counts[0]}, skipped={counts[1]}]" if counts else ""
+            print(f"    -> PASSED ({duration:.2f}s){count_info}")
 
-    print("\n================================================================================")
+    print("\n==========================================================================================")
     print("INTEGRATION CHECK SUMMARY TABLE")
-    print("================================================================================")
-    print(f"{'Step Name':<42} | {'Status':<8} | {'Duration':<10}")
-    print("-" * 66)
-    for name, status, duration, _ in results:
-        print(f"{name:<42} | {status:<8} | {duration:>7.2f}s")
-    print("=" * 66)
+    print("==========================================================================================")
+    print(f"{'Step Name':<42} | {'Status':<8} | {'Passed':<6} | {'Skipped':<7} | {'Duration':<10}")
+    print("-" * 82)
+    total_passed = 0
+    total_skipped = 0
+    total_failed = 0
+    for name, status, duration, counts, _ in results:
+        if counts:
+            p, s, f = counts
+            total_passed += p
+            total_skipped += s
+            total_failed += f
+            p_str, s_str = str(p), str(s)
+        else:
+            p_str, s_str = "-", "-"
+        print(f"{name:<42} | {status:<8} | {p_str:>6} | {s_str:>7} | {duration:>7.2f}s")
+    print("=" * 82)
+    print(f"Total Test Counts: {total_passed} passed, {total_skipped} skipped, {total_failed} failed.")
 
     if overall_success:
         print("\nALL INTEGRATION CHECKS PASSED (exit 0).\n")
@@ -140,3 +189,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

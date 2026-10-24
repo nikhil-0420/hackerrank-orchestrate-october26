@@ -144,3 +144,32 @@ This document tracks hypotheses, investigation paths, and validation outcomes fo
    CREATE TABLE security_audit_records (resource_id TEXT PRIMARY KEY, subject_reference TEXT NOT NULL, event_code TEXT NOT NULL, retention_until TEXT NOT NULL, updated_at TEXT NOT NULL)
    ```
 
+## Phase 4 Hypothesis 5: Deterministic Citation Resolution & Missing Audit Log Planning
+
+### Hypothesis Formulation
+1. **Present Records Citation**:
+   - Any present or remediated record (`state` in `{"PRESENT", "ANONYMIZED", "REDACTED", "ACTIVE"}`) must cite the latest citable evidence file (`file_captured_at <= audit_at`) containing that resource.
+2. **Absent Records Citation**:
+   - Any absent record (`state == "ABSENT"`) must cite:
+     - The latest citable evidence file containing an explicit 404 / NOT_FOUND observation (`http_status == 404`, `status_code == 404`, `result == "NOT_FOUND"`, or `rows == 0`), OR
+     - If no explicit not-found observation exists, the latest citable covering snapshot for that `system_id` that omits the record.
+3. **Multi-File Citations (e.g. `case_04`)**:
+   - When a case has multiple compliant records spanning different systems (e.g. `case_04` with `account_004` absent in database snapshot `evidence_54` and `analytics_901` anonymized in analytics report `evidence_56`), each step independently resolves its citation using rules (1) and (2). No hardcoding or case-specific exception is required.
+4. **Timegate Strictness**:
+   - Under no circumstances may any step cite an evidence file with `file_captured_at > audit_at`.
+5. **Incomplete Audit Log Verification**:
+   - Under `rule_12`, every account deletion case requires an audit log verification check. If the audit record was not captured in evidence at or before `audit_at`, the future verification step must cite `evidence_id=""`.
+
+## Phase 4 Hypothesis 6: Decoupled Anchor Assignment & Metamorphic Invariance
+
+### Hypothesis Formulation
+1. **Untrusted Claim Invariance**:
+   - `reported_status` in `deletion_requests.csv` is an unverified claim. Basing anchor candidate filtering on `reported_status == "COMPLETE"` vs `"NOT_STARTED"` violates adversarial robustness and fails Metamorphic Property A.
+2. **Decoupled Bipartite Scoring**:
+   - Anchor disambiguation within batch execution windows (`[-10 min, +60 min]` or tutorial `[-10 min, +10 min]`) can be resolved purely through:
+     - Hard resource file co-occurrence (+40 score bonus).
+     - Downstream worker schedule offsets matching known target system delay distributions (+50 score bonus for matching within 1.5 min tolerance).
+3. **Validation**:
+   - Evaluated across all 518 cases: exactly 0 differences in anchor assignments occur when mutating `reported_status`, satisfying Property A while retaining 100% accuracy on sample anchors.
+
+
