@@ -86,18 +86,18 @@ def extract_identifiers(data: Dict[str, Any]) -> Identifiers:
 
         k_lower = k.lower()
 
-        # Check for masking
-        if v_str.endswith(".") or v_str.endswith("@") or "*" in v_str or "..." in v_str:
-            is_masked = True
-
         if k_lower in ("email", "customer_email", "owner_email", "requester_email"):
             if not email:
                 email = v_str
             raw_found[k] = v_str
+            if "*" in v_str or "..." in v_str or v_str.endswith("@") or (len(v_str) < 4 and v_str.endswith(".")):
+                is_masked = True
         elif k_lower in ("phone", "owner_phone", "requester_phone"):
             if not phone:
                 phone = v_str
             raw_found[k] = v_str
+            if "*" in v_str or "..." in v_str:
+                is_masked = True
         elif k_lower in ("email_hash",):
             if not email_hash:
                 email_hash = v_str
@@ -110,6 +110,8 @@ def extract_identifiers(data: Dict[str, Any]) -> Identifiers:
             if not name:
                 name = v_str
             raw_found[k] = v_str
+            if "*" in v_str or "..." in v_str:
+                is_masked = True
         elif k_lower in ("lookup_key", "match_key", "correlation_key", "subject_key"):
             raw_found[k] = v_str
             if "@" in v_str:

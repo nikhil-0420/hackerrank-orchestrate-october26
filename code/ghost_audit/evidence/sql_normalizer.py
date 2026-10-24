@@ -124,17 +124,18 @@ def normalize_sql_file(meta: EvidenceFileMeta) -> Tuple[List[Observation], List[
                     )
                     observations.append(obs)
 
-            coverage_records.append(
-                CoverageRecord(
-                    file_id=meta.file_id,
-                    file_captured_at=meta.captured_at,
-                    system_id=table_system,
-                    collection=table,
-                    obs_time=table_obs_time,
-                    source_kind="sql",
-                    record_count=len(rows),
+            if meta.origin != "customer_data_inventory_capture":
+                coverage_records.append(
+                    CoverageRecord(
+                        file_id=meta.file_id,
+                        file_captured_at=meta.captured_at,
+                        system_id=table_system,
+                        collection=table,
+                        obs_time=table_obs_time,
+                        source_kind="sql",
+                        record_count=len(rows),
+                    )
                 )
-            )
 
     finally:
         conn.close()

@@ -46,6 +46,9 @@ class ActivityLog:
     """In-memory collection of system activity events with time-gated query methods."""
 
     def __init__(self, rows: list[SystemActivityRow] | None = None, path: Path | str | None = None):
+        if isinstance(rows, (str, Path)):
+            path = rows
+            rows = None
         if rows is not None:
             self.rows = rows
         else:

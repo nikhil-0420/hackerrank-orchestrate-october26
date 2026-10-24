@@ -49,6 +49,26 @@ VALID_DATA_CATEGORIES = {
 }
 
 
+def normalize_system_id(system_id: str) -> str:
+    """Normalizes internal replica/service names to canonical system names."""
+    s = (system_id or "").strip().lower()
+    if s in ("support_replica", "support_platform", "attachment_preview", "support_storage_service"):
+        return "support_platform"
+    if s in ("profile_service", "account_service", "customer_account_service", "account_admin_portal", "account_history_service", "account_failover_replica"):
+        return "account_service"
+    if s in ("user_export_store", "export_service"):
+        return "export_service"
+    if s in ("backup_restore_service", "backup_service"):
+        return "backup_service"
+    if s in ("analytics_identity_store", "analytics_platform"):
+        return "analytics_platform"
+    if s in ("search_index_admin", "search_service"):
+        return "search_service"
+    if s in ("integration_admin", "integration_service"):
+        return "integration_service"
+    return s
+
+
 def classify_category(
     system_id: str,
     collection: str,
@@ -59,7 +79,7 @@ def classify_category(
     Table-driven classifier mapping (system_id, collection, field shape) to a data category.
     Shape classifier wins over metadata.
     """
-    sys_str = (system_id or "").lower().strip().strip('"\'')
+    sys_str = normalize_system_id(system_id)
     col_str = (collection or "").lower().strip().strip('"\'')
     res_str = (resource_id or "").lower().strip().strip('"\'')
     state_dict = state if isinstance(state, dict) else {}
@@ -69,7 +89,29 @@ def classify_category(
     if record_type in VALID_DATA_CATEGORIES:
         return record_type
 
-    # 1. ACCOUNT_TOMBSTONE
+    # 1. SECURITY_AUDIT_LOG (takes precedence over correlation_key/secondary identifiers)
+    if (
+        sys_str == "security_service"
+        or "security_audit" in col_str
+        or "audit_record" in res_str
+        or col_str.startswith("audit_record")
+        or "audit_ledger" in col_str
+    ):
+        return "SECURITY_AUDIT_LOG"
+
+    # 2. SECONDARY_IDENTIFIER (checked before generic profile/service fallbacks)
+    if (
+        "secondary" in col_str
+        or "secondary" in res_str
+        or "secondary_email" in state_dict
+        or "legacy_contact_index" in col_str
+        or "legacy_contact_index" in str(state_dict.get("source", "")).lower()
+        or "contact_lookup" in col_str
+        or ("correlation_key" in state_dict and len(str(state_dict.get("correlation_key", ""))) in (32, 64))
+    ):
+        return "SECONDARY_IDENTIFIER"
+
+    # 3. ACCOUNT_TOMBSTONE
     if (
         sys_str == "identity_service"
         or "tombstone" in col_str

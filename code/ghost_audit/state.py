@@ -55,18 +55,26 @@ class ResourceState:
 
 
 def _is_explicit_absence(obs: Observation) -> bool:
-    """Checks whether an observation explicitly records a lookup miss / 404 / NOT_FOUND."""
+    """Checks whether an observation explicitly records a lookup miss / 404 / NOT_FOUND / DELETED."""
     if not isinstance(obs.state, dict):
         return False
     state = obs.state
-    # Check http_status
-    if str(state.get("http_status", "")).strip() == "404":
+    # Check status_code or http_status
+    if str(state.get("status_code", "")).strip() == "404" or str(state.get("http_status", "")).strip() == "404":
         return True
+    if "profile" in state and state["profile"] is None:
+        return True
+    if "tombstone" not in obs.collection.lower() and "deleted_customer_reference" not in obs.collection.lower() and not str(obs.resource_id).startswith("tombstone_"):
+        if str(state.get("account_status", "")).strip().upper() == "DELETED":
+            return True
     if str(state.get("rows", "")).strip() == "0":
         return True
-    # Check result
+    # Check result or state string
     result_val = str(state.get("result", "")).strip().lower().strip('"\'')
     if result_val in ABSENT_STATUS_VALUES:
+        return True
+    st_val = str(state.get("state", "")).strip().lower().strip('"\'')
+    if st_val in ABSENT_STATUS_VALUES:
         return True
     # Check hits total in search queries
     hits = state.get("hits")
@@ -93,8 +101,11 @@ def _extract_direct_pii(obs: Observation) -> Dict[str, str]:
         for k, v in obs.state.items():
             if v and isinstance(v, str) and not v.startswith("***"):
                 kl = k.lower()
-                if "email" in kl and "hash" not in kl and "@" in v:
-                    pii["email"] = v
+                if "@" in v and not v.endswith("@") and "..." not in v:
+                    import re
+                    m = re.search(r"\b([a-zA-Z0-9_\.\-\+]+@[a-zA-Z0-9_\.\-]+\.[a-zA-Z]{2,})\b", v)
+                    if m and not m.group(0).startswith("***"):
+                        pii["email"] = m.group(0)
                 elif "phone" in kl:
                     pii["phone"] = v
                 elif kl in ("name", "full_name", "display_name"):
@@ -215,25 +226,32 @@ def determine_resource_state(
     is_blocked_or_disabled = False
     if isinstance(chosen.state, dict):
         st = chosen.state
+        # State / Result value checks
+        state_str = str(st.get("state") or st.get("result") or "").strip().upper()
+        if state_str == "ACTIVE":
+            is_active = True
+        elif state_str in ("DISABLED", "BLOCKED"):
+            is_blocked_or_disabled = True
+
         # Data flow
         if "enabled" in st:
             en_val = st["enabled"]
-            if en_val is True or str(en_val).lower() == "true":
+            if en_val is True or str(en_val).lower() in ("true", "1"):
                 is_active = True
-            elif en_val is False or str(en_val).lower() == "false":
+            elif en_val is False or str(en_val).lower() in ("false", "0"):
                 is_blocked_or_disabled = True
         # Backup restore
         if "restore_allowed" in st:
             ra_val = st["restore_allowed"]
-            if ra_val is True or str(ra_val).lower() == "true":
+            if ra_val is True or str(ra_val).lower() in ("true", "1"):
                 is_active = True
-            elif ra_val is False or str(ra_val).lower() == "false":
+            elif ra_val is False or str(ra_val).lower() in ("false", "0"):
                 is_blocked_or_disabled = True
         if "deletion_block" in st:
             db_val = st["deletion_block"]
-            if db_val is False or str(db_val).lower() == "false":
+            if db_val is False or str(db_val).lower() in ("false", "0"):
                 is_active = True
-            elif db_val is True or str(db_val).lower() == "true":
+            elif db_val is True or str(db_val).lower() in ("true", "1"):
                 is_blocked_or_disabled = True
 
     # Tombstone check

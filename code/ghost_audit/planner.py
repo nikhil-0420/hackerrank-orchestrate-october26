@@ -232,12 +232,18 @@ def plan_case(
         for rid in sorted(case_linkage.attributed_resources.keys()):
             dec = treatments.get(rid)
             attr = case_linkage.attributed_resources[rid]
-            citable_file = attr.best_citable_file_id or shared_file or ""
+            sys_id = dec.system_id if dec else attr.system_id
+            
+            citable_file = attr.best_citable_file_id
+            if not citable_file and coverage_index is not None:
+                citable_file = find_latest_covering_evidence_id(sys_id, coverage_index, audit_at)
+            if not citable_file:
+                citable_file = shared_file or ""
 
             if dec and dec.verification_op:
                 verifications.append({
                     "phase": PHASE_VERIFICATION,
-                    "system_id": dec.system_id,
+                    "system_id": sys_id,
                     "resource_id": rid,
                     "operation": dec.verification_op,
                     "state": dec.verification_state,
