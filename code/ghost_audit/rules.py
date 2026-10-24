@@ -309,17 +309,28 @@ class RuleEngine:
 
                 if is_active_hold:
                     # Must be retained and present
-                    is_comp = (st == "PRESENT")
-                    return TreatmentDecision(
-                        resource_id=rid,
-                        system_id=sys_id,
-                        category=category,
-                        rule_id=rule.rule_id,
-                        required_action=action,
-                        is_compliant=is_comp,
-                        verification_op="VERIFY_RECORD_PRESENT",
-                        verification_state="PRESENT",
-                    )
+                    if st == "PRESENT":
+                        return TreatmentDecision(
+                            resource_id=rid,
+                            system_id=sys_id,
+                            category=category,
+                            rule_id=rule.rule_id,
+                            required_action=action,
+                            is_compliant=True,
+                            verification_op="VERIFY_RECORD_PRESENT",
+                            verification_state="PRESENT",
+                        )
+                    else:
+                        return TreatmentDecision(
+                            resource_id=rid,
+                            system_id=sys_id,
+                            category=category,
+                            rule_id=rule.rule_id,
+                            required_action=action,
+                            is_compliant=True,
+                            verification_op=None,
+                            verification_state=None,
+                        )
                 else:
                     # Expired retention
                     return TreatmentDecision(
