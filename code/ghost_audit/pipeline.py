@@ -269,6 +269,7 @@ def run_pipeline(
         )
         decisions.append(dec)
         status_counts[dec.deletion_status] += 1
+        total_undecided += sum(1 for t in dec.treatments.values() if t.is_undecided)
 
     # 5. Emit output CSV
     id_sort = cfg.get("id_sort", "natural")

@@ -316,6 +316,12 @@ def determine_resource_state(
                 is_active = True
             elif ra_val is False or str(ra_val).lower() in ("false", "0"):
                 is_blocked_or_disabled = True
+        if "decision" in st:
+            dec_val = str(st["decision"]).strip().lower()
+            if dec_val in ("deny", "denied", "blocked"):
+                is_blocked_or_disabled = True
+            elif dec_val in ("allow", "allowed", "permit", "permitted"):
+                is_active = True
         if "deletion_block" in st:
             db_val = st["deletion_block"]
             if db_val is False or str(db_val).lower() in ("false", "0"):

@@ -1492,6 +1492,36 @@ repo_root=E:\Orcherstate\hackerrank-orchestrate-october26
 worktree=main
 parent_agent=none
 
+## 2026-10-25T17:22:00+05:30 Fix pass 2a: doc_normalizer digit regex, typo normalization, line-level identifiers, status word parsing
 
+User Prompt (verbatim, secrets redacted):
+Fix pass 2a (before Item 3), one commit, then STOP:
+1) doc_normalizer: resource regex must require digits (account_\d+, not account_\w+). Allow the OCR fix: match audlt_record_\d+ and audit_record_\d+, normalised to audit_record_N.
+2) Attach identifiers per resource, using the email/user_id on the same OCR line or row as the resource id, not the first one in the file. Fall back to the document-level value only if the file names exactly one user.
+3) Parse status words on the resource's own line (Continuous/Active/Healthy -> enabled true, Paused/Disabled -> false). For DATA_FLOW and backup restore status, if status is unknown, do not assume compliant; report it as undecided and list it.
+4) Print every hidden case whose output changes vs HEAD, with before/after status, steps and the raw OCR line supporting each. Confirm 32/32 samples unchanged, add tests, and run validate, run_checks and pytest.
 
+Agent Response Summary:
+Implemented all requirements for Fix pass 2a: (1) updated doc_normalizer.py to require digits in RESOURCE_RE, added audlt_record_\d+ pattern and normalization to audit_record_N; (2) implemented line-level and card-level identifier attribution per resource in doc_normalizer.py, falling back to document-level values only if the document names exactly one user; (3) parsed status words (Continuous/Active/Healthy -> enabled=True, Paused/Disabled -> enabled=False, plus restore_allowed for backups) in doc_normalizer.py, updated rules.py and state.py to treat unobserved/unknown DATA_FLOW and backup restore statuses as non-compliant and undecided (data_flow_status_unknown, backup_restore_status_unknown); (4) added comprehensive unit tests in tests/test_doc_normalizer.py and tests/test_rules.py (126 tests passing); (5) verified 32/32 sample cases remain 100% byte-identical; (6) measured exactly 3 hidden cases changing vs HEAD (case_39, case_45, case_55); and validated output.csv (0 errors) and all integration checks (66/66 passed).
 
+Actions:
+* replace_file_content: code/ghost_audit/evidence/doc_normalizer.py
+* replace_file_content: code/ghost_audit/rules.py
+* replace_file_content: code/ghost_audit/state.py
+* replace_file_content: code/ghost_audit/pipeline.py
+* replace_file_content: tests/test_rules.py
+* write_to_file: tests/test_doc_normalizer.py
+* run_command: python code/main.py
+* run_command: python -m ghost_audit.validate
+* run_command: python tools/run_checks.py
+* run_command: python -m pytest tests/
+* replace_file_content: log.txt (Per-turn log entry)
+* run_command: python tools/check_log.py
+
+Context:
+tool=Antigravity
+model=Gemini 3.8 Flash (High)
+branch=fixpass
+repo_root=E:\Orcherstate\hackerrank-orchestrate-october26
+worktree=main
+parent_agent=none

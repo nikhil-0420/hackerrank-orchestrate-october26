@@ -113,7 +113,7 @@ class RuleEngine:
                     verification_op="VERIFY_DATA_FLOW_DISABLED",
                     verification_state="DISABLED",
                 )
-            else:
+            elif resource_state.is_blocked_or_disabled or resource_state.status == "ABSENT":
                 return TreatmentDecision(
                     resource_id=rid,
                     system_id=sys_id,
@@ -121,6 +121,23 @@ class RuleEngine:
                     rule_id=None,
                     required_action="DISABLE_FLOW",
                     is_compliant=True,
+                    verification_op="VERIFY_DATA_FLOW_DISABLED",
+                    verification_state="DISABLED",
+                )
+            else:
+                return TreatmentDecision(
+                    resource_id=rid,
+                    system_id=sys_id,
+                    category=category,
+                    rule_id=None,
+                    required_action="DISABLE_FLOW",
+                    is_compliant=False,
+                    is_undecided=True,
+                    undecided_reason="data_flow_status_unknown",
+                    finding_op="REPORT_ACTIVE_DATA_FLOW",
+                    finding_state="ACTIVE",
+                    remediation_op="DISABLE_DATA_FLOW",
+                    remediation_state="DISABLED",
                     verification_op="VERIFY_DATA_FLOW_DISABLED",
                     verification_state="DISABLED",
                 )
@@ -286,7 +303,7 @@ class RuleEngine:
                         verification_op="VERIFY_RESTORE_BLOCKED",
                         verification_state="BLOCKED",
                     )
-                else:
+                elif resource_state.is_blocked_or_disabled or resource_state.status == "ABSENT":
                     # Restore blocked -> compliant
                     return TreatmentDecision(
                         resource_id=rid,
@@ -295,6 +312,23 @@ class RuleEngine:
                         rule_id=rule.rule_id,
                         required_action=action,
                         is_compliant=True,
+                        verification_op="VERIFY_RESTORE_BLOCKED",
+                        verification_state="BLOCKED",
+                    )
+                else:
+                    return TreatmentDecision(
+                        resource_id=rid,
+                        system_id=sys_id,
+                        category=category,
+                        rule_id=rule.rule_id,
+                        required_action=action,
+                        is_compliant=False,
+                        is_undecided=True,
+                        undecided_reason="backup_restore_status_unknown",
+                        finding_op="REPORT_RESTORE_RISK",
+                        finding_state="ACTIVE",
+                        remediation_op="BLOCK_RESTORE",
+                        remediation_state="BLOCKED",
                         verification_op="VERIFY_RESTORE_BLOCKED",
                         verification_state="BLOCKED",
                     )

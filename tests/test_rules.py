@@ -112,6 +112,38 @@ class TestRuleEngine(unittest.TestCase):
         dec = self.engine.evaluate_resource(st, "UNKNOWN", self.audit_at)
         self.assertTrue(dec.is_undecided)
 
+    def test_data_flow_unknown_status_undecided(self):
+        st = ResourceState(
+            resource_id="data_flow_unknown_1",
+            system_id="integration_service",
+            status="PRESENT",
+            is_active=False,
+            is_blocked_or_disabled=False,
+        )
+        dec = self.engine.evaluate_resource(st, "DATA_FLOW", self.audit_at)
+        self.assertFalse(dec.is_compliant)
+        self.assertTrue(dec.is_undecided)
+        self.assertEqual(dec.undecided_reason, "data_flow_status_unknown")
+        self.assertEqual(dec.finding_op, "REPORT_ACTIVE_DATA_FLOW")
+        self.assertEqual(dec.remediation_op, "DISABLE_DATA_FLOW")
+        self.assertEqual(dec.verification_op, "VERIFY_DATA_FLOW_DISABLED")
+
+    def test_backup_restore_unknown_status_undecided(self):
+        st = ResourceState(
+            resource_id="backup_unknown_1",
+            system_id="backup_service",
+            status="PRESENT",
+            is_active=False,
+            is_blocked_or_disabled=False,
+        )
+        dec = self.engine.evaluate_resource(st, "BACKUP_ARCHIVE", self.audit_at)
+        self.assertFalse(dec.is_compliant)
+        self.assertTrue(dec.is_undecided)
+        self.assertEqual(dec.undecided_reason, "backup_restore_status_unknown")
+        self.assertEqual(dec.finding_op, "REPORT_RESTORE_RISK")
+        self.assertEqual(dec.remediation_op, "BLOCK_RESTORE")
+        self.assertEqual(dec.verification_op, "VERIFY_RESTORE_BLOCKED")
+
 
 if __name__ == "__main__":
     unittest.main()
