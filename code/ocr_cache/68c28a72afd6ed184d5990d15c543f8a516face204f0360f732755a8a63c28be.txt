@@ -1,0 +1,109 @@
+Northstar Shop
+
+Home
+
+Customer references
+
+Orders
+
+Support
+
+Finance
+
+Data management
+
+Reports
+
+Customer Reference
+Registry
+
+Northstar Shop Customer references
+
+user_17
+
+Customer Reference Registry
+
+Retained reference
+
+Customer key - Account Platform - eu-west
+over Linked records History
+Customer key
+Overview
+system Record reference
+1) Orders ‘oRD-20263245
+2| Support cs-3245,
+| Support cs-3378
+4) Finance FIN-7742
+
+Search references, orders, support cases or finance records..
+
+11 Jan 2024 08:42 UTC
+
+Relationship
+
+Linked to customer
+
+Linked to customer
+
+Linked to customer
+
+Linked to customer
+
+Most recent update
+
+10 Mar 2026 07:18 UTC
+
+Created (UTC)
+
+11 Jan 2024 08:45
+
+14 Feb 2024 12:16
+
+03 Jun 2024 09:27
+
+22 Aug 2024 15:03,
+
+Updated moments ago 4
+
+Status
+Active .
+Active .
+Active .
+Active .
+
+0
+
+Production
+
+Filter Export
+
+ner team
+
+Account Platform
+
+History
+
+10 Mar 2026 Metadata reviewed
+22 Aug 2024 Finance link added
+03 Jun 2024 Support link added
+14 Feb 20: Support link added
+M1 Jan 2024 Reference created
+Activity
+
+@ Reference created
+
+Ree
+
+Order link added
+oRD-20263245,
+
+Support links added
+'S-3245, C:
+
+Finance link added
+FIN-7742
+
+Metadata reviewed
+Ree
+
+Help (CR

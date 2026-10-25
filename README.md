@@ -86,9 +86,9 @@ The engine supports three modular configurations selectable via `--mode`:
 
 Evidence files in `dataset/evidence/` include 15 scanned PDFs and PNG screenshots (e.g. support portal exports, user account termination receipts).
 
-- **Native Parser**: The engine features pure-Python structured loaders (`ghost_audit.loaders.pdf_loader` and `ghost_audit.loaders.png_loader`) that extract text, metadata, and token patterns without requiring external operating system binaries.
-- **Tesseract OCR Integration**: If Tesseract is installed and available in the system PATH, the engine will leverage OCR to transcribe pixel-based graphics.
-- **Deterministic Token Fallback**: If Tesseract is not installed or fails on a system, the engine transparently activates its deterministic token fallback. The pipeline extracts textual strings, headers, and metadata directly, ensuring that tests and production runs succeed with 100% reliability on any standard developer environment.
+- **Committed Hermetic OCR Cache**: All 11 PNG screenshots and 4 PDF documents are pre-extracted using Tesseract OCR and cached under `code/ocr_cache/<sha256>.txt`. The pipeline loads these committed files first, ensuring 100% reproducible, byte-identical output across any developer environment without requiring external binaries.
+- **Dynamic Fallback**: If an uncached image is processed, the engine attempts to execute Tesseract CLI or `pytesseract` across standard installation paths. If neither is available, an explicit placeholder is recorded.
+
 
 ---
 

@@ -1,7 +1,7 @@
 import hashlib
 import subprocess
 from pathlib import Path
-from ..paths import CACHE_DIR
+from ..paths import CACHE_DIR, OCR_CACHE_DIR
 
 
 def get_file_sha256(file_path: Path) -> str:
@@ -15,17 +15,26 @@ def get_file_sha256(file_path: Path) -> str:
 def extract_pdf_text(pdf_path: Path) -> str:
     """
     Extract text from a PDF file with sha256-based caching.
-    Tries:
+    Prefers committed code/ocr_cache/<sha256>.txt so output is hermetic.
+    Otherwise tries:
     1. pdftotext -layout
     2. pdfplumber (if installed)
     3. pypdf (if installed)
     """
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
     file_hash = get_file_sha256(pdf_path)
+
+    # 1. Prefer committed hermetic cache
+    committed_cache = OCR_CACHE_DIR / f"{file_hash}.txt"
+    if committed_cache.exists():
+        return committed_cache.read_text(encoding="utf-8", errors="replace")
+
+    # 2. Check runtime cache
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
     cache_file = CACHE_DIR / f"pdf_{file_hash}.txt"
 
     if cache_file.exists():
         return cache_file.read_text(encoding="utf-8", errors="replace")
+
 
     text = ""
     # 1. Try pdftotext CLI

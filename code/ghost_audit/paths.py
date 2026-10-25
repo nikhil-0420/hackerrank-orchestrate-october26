@@ -16,4 +16,5 @@ SYSTEM_ACTIVITY_PATH = DATASET_DIR / "system_activity.csv"
 DELETION_RULES_PATH = DATASET_DIR / "deletion_rules.csv"
 
 CACHE_DIR = CODE_DIR / ".cache"
+OCR_CACHE_DIR = CODE_DIR / "ocr_cache"
 OUTPUT_PATH = REPO_ROOT / "output.csv"

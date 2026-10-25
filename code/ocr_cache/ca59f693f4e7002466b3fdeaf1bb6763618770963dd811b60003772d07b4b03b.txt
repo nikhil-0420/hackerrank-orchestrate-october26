@@ -1,0 +1,111 @@
+} Northstar Shop
+
+OD overview
+
+O Threats
+
+[ OC) Account events
+Audit logs
+Detections
+
+Investigations
+
+Ooo0oda
+
+Reports
+
+Sentinel
+Production workspace
+build 2026.10.84
+
+Sentinel © Search events, users, IP addresses or references.
+
+vents
+
+Northstar Shop / Sentinel / Account
+
+Account events {6 sianed events J
+
+Subject filter: user_03 - 18-26 Aug 2026 UTC.
+
+Events (6) Timeline
+6 5
+~—
+
+Events (6)
+
+Time (UTC) Event Category
+
+(0 25 Aug 04:03 Account closure recorded Account lfecycle
+(© 25 Aug 03:21 Session revoked Session management
+(Hy 24 Aug 16:14 Recovery challenge completed Authentication
+
+(© 22 Aug 1:27 Email change confirmed Profile update
+
+(H 20Aug 09:42 Login from new device Authentication
+
+18 Aug 14:05 Password changed Authentication
+
+Subject
+
+user_03
+
+user_03
+
+user_03
+
+user_03
+
+user_03
+
+user_03
+
+Integrity failures
+
+0
+
+~_
+
+Actor
+
+‘Automated workflow
+
+Security system
+
+User (self)
+
+User (self)
+
+User (self)
+
+User (self)
+
+Filter Export. Actions
+
+Partition
+2026-Q3
+an“ ~_
+Updated moments ago - 6 records audit_record_003 - Raw event
+Geos) GULICED event_type account_closure_recorded
+audit_record_003 subject user_03
+en ‘audlt_record_002 actor ‘automated account workflow
+recorded_at 2026-08-25T04:03:00Z
+‘audit_record_001
+fingerprint f0c...31ad
+‘audit_record_006
+signature Valid
+‘audit_record_005 journal 2026-03
+‘audit_record_004
+ity
+25 Aug
+
+Account closure recorded
+
+25 Aug
+Session revoked
+
+24 Aug
+Recovery challenge completed
+
+22.Aug
+Email change confirmed

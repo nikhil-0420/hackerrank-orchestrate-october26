@@ -1,0 +1,119 @@
+Northstar Shop
+
+Connections
+
+Topology
+
+Monitoring
+
+Events
+
+Destinations
+
+Settings
+
+BridgeOps © Search connectors...
+
+Shop | BridgeOps / Connections
+
+Connections
+
+PRODUCTION - eu-west - 07 Aug 2026 08:00 UTC
+
+‘12 connectors
+
+Topology
+
+Healthy
+
+12
+
+Topology
+
+Connector
+
+7) data_flow1121
+
+2) data_flow.9846
+
+3) Order notifications
+
+@ | Delivery tracking
+
+Throughput
+
+Recent deliveries
+
+Destination
+
+customer_analytics_warehouse
+
+customer_analytics_warehouse
+
+notification_service
+
+logistics_warehouse
+
+Deliver
+
+18s
+
+Selector
+
+jain.aditi@gmail.com
+
+lucia-torres@gmail.com
+
+order events
+
+shipment events
+
+Mode
+
+Continuous
+
+Continuous
+
+Continuous
+
+Continuous
+
+Events/hour
+
+1,284
+
+842
+
+650
+
+420
+
+Updated moments ago 4
+
+Last contact
+
+07:59:42
+
+07:59:36
+
+07:59:28
+
+07:59:13
+
+Production Help ( B
+
+Healthy
+data_flow_1121
+status Healthy
+Owner Data Platform
+Selector jain.aditi@gmail.com
+Last response 2000K- 18s
+Acti
+© o7:se:a2
+© 07:50:10
+© o7:se:aa
+
+@ 07:55:02
+
+nation acknowledged b
+
