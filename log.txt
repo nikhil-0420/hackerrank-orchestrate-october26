@@ -1458,5 +1458,40 @@ repo_root=E:\Orcherstate\hackerrank-orchestrate-october26
 worktree=main
 parent_agent=none
 
+## 2026-10-25T16:32:00+05:30 Item 2 Pre-Item 3 Deep Audit (Evidence and Normalizer Diagnostics)
+
+User Prompt (verbatim, secrets redacted):
+Before Item 3, print only (no code changes):
+1) case_39: every observation of data_flow_1121 (file, obs_time, source_kind, enabled value), the state resolver's result and which observation decided it, and why evidence_14 (screenshot shows mode Continuous/Healthy) is cited for VERIFY_FLOW_DISABLED. Show what final cited (evidence_86) and what that file says.
+2) case_45: the 6 step resource_ids. grep output.csv for account_closure_recorded across all 518 cases. Max audit_record steps in any sample case vs case_45. Where does audit_record_002 appear?
+3) doc_normalizer.py: the lines that attach identifiers to resource ids, and the identifiers attached to data_flow_9846 in evidence_14.
+4) How many sample steps or resources derive from PNG/PDF observations.
+
+Agent Response Summary:
+Investigated and reported all 4 diagnostic queries with zero code changes: (1) detailed all observations for data_flow_1121, explaining why evidence_14 was cited for VERIFY_DATA_FLOW_DISABLED (doc_normalizer did not parse active state tokens from image text, causing is_active=False default) and contrasting with tag final which cited covering snapshot evidence_86; (2) analyzed case_45 resource IDs, confirmed account_closure_recorded appears in only 1 case across 518 cases due to regex prefix matching event_type strings, confirmed max audit_record steps in any sample is 1 vs 5 in case_45, and discovered audit_record_002 was misrecognized as audlt_record_002 in evidence_37 OCR text; (3) identified lines 24-50 in doc_normalizer.py where document-level email doc_emails[0] was indiscriminately attached to data_flow_9846; (4) measured that exactly 1 sample step/resource across all 32 samples derives from media evidence (case_07 citing PDF evidence_58), with 0 sample steps deriving from any PNG.
+
+Actions:
+* run_command: python -c "..." (inspect data_flow_1121 observations and evidence_86)
+* view_file: code/ghost_audit/evidence/doc_normalizer.py
+* view_file: code/ghost_audit/rules.py
+* view_file: code/ghost_audit/state.py
+* run_command: python -c "..." (view evidence_86)
+* run_command: python -c "..." (search output.csv for account_closure_recorded)
+* run_command: python -c "..." (check max audit_record steps in sample_output.csv)
+* run_command: python -c "..." (search whole repo for audit_record_002)
+* run_command: python -c "..." (grep audlt in ocr_cache)
+* run_command: python -c "..." (check PNG/PDF usage across 32 sample cases)
+* replace_file_content: log.txt (Per-turn log entry)
+* run_command: python tools/check_log.py
+
+Context:
+tool=Antigravity
+model=Gemini 3.8 Flash (High)
+branch=fixpass
+repo_root=E:\Orcherstate\hackerrank-orchestrate-october26
+worktree=main
+parent_agent=none
+
+
 
 
