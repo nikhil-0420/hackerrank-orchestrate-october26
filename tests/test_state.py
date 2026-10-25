@@ -196,6 +196,114 @@ class TestResourceState(unittest.TestCase):
         self.assertTrue(res.is_active)
         self.assertFalse(res.is_blocked_or_disabled)
 
+    def test_supersedence_later_covering_snapshot_supersedes_earlier_presence(self):
+        # Presence in an earlier image snapshot at 2026-06-18
+        obs_pres = Observation(
+            file_id="evidence_23",
+            file_captured_at="2026-06-18T12:00:00Z",
+            obs_time="2026-06-18T12:00:00Z",
+            system_id="export_service",
+            collection="customer_exports",
+            resource_id="export_test_super",
+            identifiers=Identifiers(),
+            state={"status": "AVAILABLE"},
+            source_kind="image",
+            raw_ref="image:evidence_23 id:export_test_super",
+        )
+        # Later covering SQL export snapshot at 2026-07-18 that does NOT contain export_test_super
+        cov_rec = CoverageRecord(
+            file_id="evidence_83",
+            system_id="export_service",
+            collection="customer_exports",
+            obs_time="2026-07-18T10:43:35Z",
+            file_captured_at="2026-07-18T10:43:35Z",
+            source_kind="sql",
+        )
+        cov = CoverageIndex([cov_rec])
+
+        res = determine_resource_state(
+            resource_id="export_test_super",
+            system_id="export_service",
+            observations=[obs_pres],
+            audit_at="2026-07-19T13:00:00Z",
+            coverage_index=cov,
+            collection_hint="customer_exports",
+        )
+        self.assertEqual(res.status, "ABSENT")
+        self.assertIn("superseded present", res.conflict_notes or "")
+
+    def test_replica_presence_supersedes_earlier_absence(self):
+        # Absence observation (e.g. 404 lookup) at 2026-07-10
+        obs_abs = Observation(
+            file_id="evidence_15",
+            file_captured_at="2026-07-10T12:00:00Z",
+            obs_time="2026-07-10T10:00:00Z",
+            system_id="account_service",
+            collection="customer_profiles",
+            resource_id="account_test_rep",
+            identifiers=Identifiers(),
+            state={"result": "NOT_FOUND"},
+            source_kind="json",
+            raw_ref="lookup:404",
+        )
+        # Replica snapshot at 2026-07-12 shows record present in replica
+        obs_replica = Observation(
+            file_id="evidence_20",
+            file_captured_at="2026-07-12T12:00:00Z",
+            obs_time="2026-07-12T10:00:00Z",
+            system_id="account_service",
+            collection="customer_profiles",
+            resource_id="account_test_rep",
+            identifiers=Identifiers(email="replica@example.com"),
+            state={"account_status": "ACTIVE", "replica_of": "read_replica_1"},
+            source_kind="sql",
+            raw_ref="row:10",
+        )
+        res = determine_resource_state(
+            resource_id="account_test_rep",
+            system_id="account_service",
+            observations=[obs_abs, obs_replica],
+            audit_at="2026-07-15T12:00:00Z",
+        )
+        self.assertEqual(res.status, "PRESENT")
+        self.assertEqual(res.replica_info, "read_replica_1")
+        self.assertIn("superseded absent", res.conflict_notes or "")
+
+    def test_earlier_covering_snapshot_does_not_supersede_later_presence(self):
+        # Covering snapshot at 2026-06-01 lacking the resource
+        cov_rec = CoverageRecord(
+            file_id="evidence_02",
+            system_id="search_service",
+            collection="search_documents",
+            obs_time="2026-06-01T10:00:00Z",
+            file_captured_at="2026-06-01T10:00:00Z",
+            source_kind="sql",
+        )
+        cov = CoverageIndex([cov_rec])
+
+        # Resource created / observed present later at 2026-06-15
+        obs_pres = Observation(
+            file_id="evidence_11",
+            file_captured_at="2026-06-15T12:00:00Z",
+            obs_time="2026-06-15T10:00:00Z",
+            system_id="search_service",
+            collection="search_documents",
+            resource_id="search_test_late",
+            identifiers=Identifiers(),
+            state={"index_status": "INDEXED"},
+            source_kind="sql",
+            raw_ref="doc:5",
+        )
+        res = determine_resource_state(
+            resource_id="search_test_late",
+            system_id="search_service",
+            observations=[obs_pres],
+            audit_at="2026-06-20T12:00:00Z",
+            coverage_index=cov,
+            collection_hint="search_documents",
+        )
+        self.assertEqual(res.status, "PRESENT")
+
 
 if __name__ == "__main__":
     unittest.main()
