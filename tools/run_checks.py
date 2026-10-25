@@ -133,7 +133,7 @@ def main() -> None:
                 "--requests",
                 "dataset/sample_deletion_requests.csv",
                 "--out",
-                "code/evaluation/evaluation_report.md",
+                "scratch/eval_self_check.md",
             ],
         ),
         (

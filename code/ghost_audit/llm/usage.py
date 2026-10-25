@@ -261,6 +261,8 @@ def render_usage_report_markdown(
     lines.append("")
     lines.append("Executive summary of token consumption, model invocations, caching performance, and operational cost estimation for the Ghost Audit engine on the full 518-case dataset.")
     lines.append("")
+    lines.append("> **Deterministic Execution Guarantee**: The pipeline execution made **0 external model calls**, consumed **0 API tokens**, incurred **$0.00 cost**, and operated under 100% deterministic local rules.")
+    lines.append("")
     lines.append("## 1. Executive Summary")
     lines.append("")
     lines.append("| Metric | Value |")

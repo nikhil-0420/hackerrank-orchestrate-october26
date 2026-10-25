@@ -27,7 +27,7 @@ pip install google-genai
 ### Exact Run Commands
 
 #### 1. Cold Full-Dataset Production Run (Config C, Default)
-Executes the full pipeline over all 518 deletion requests with cache bypassed. Generates `output.csv` at the repo root and `code/evaluation/usage_report.md` automatically:
+Executes the full pipeline over all 518 deletion requests with cache bypassed. The pipeline run makes **0 external model calls**, consumes 0 tokens ($0.00 cost), and is **100% deterministic**. Generates `output.csv` at the repo root and `code/evaluation/usage_report.md` automatically:
 ```powershell
 # Windows (PowerShell):
 $env:PYTHONPATH='code'; python code/main.py --no-cache
@@ -166,24 +166,30 @@ hackerrank-orchestrate-october26/
 ## 6. How to Reproduce Deliverables
 
 ### Reproducing `output.csv`
-Run the main script over the 518 dataset under default Config C:
+Run the main script over the 518 dataset under default Config C (makes **0 model calls** and is **100% deterministic**):
 ```powershell
 $env:PYTHONPATH='code'; python code/main.py --no-cache
 ```
 
 ### Reproducing `code/evaluation/usage_report.md`
-`code/evaluation/usage_report.md` is generated automatically at the conclusion of every `code/main.py` execution. It reports:
+`code/evaluation/usage_report.md` is generated automatically at the conclusion of every `code/main.py` execution. It confirms that 0 external API calls were made and 0 tokens were consumed. It reports:
 - Model providers (`google`) and names (`gemini-2.5-flash`).
 - Call counts per task (`L1`: 518 calls, `L2`: 15 calls, `L4`: 0 calls).
-- Input, output, and total token counts.
-- Average tokens per request and per-request costs.
-- Cache statistics, schema validation failures (0), and deterministic fallback counts.
+- Input, output, and total token counts (all 0).
+- Average tokens per request and per-request costs ($0.000000).
+- Cache statistics, schema validation failures (0), and deterministic fallback counts (533).
 - Row-sum and per-case reconciliation checks.
 
 ### Reproducing `code/evaluation/evaluation_report.md`
-Run the evaluation suite over the sample ground truth:
+Run the pipeline on the 32 sample requests and evaluate against ground truth:
 ```powershell
-$env:PYTHONPATH='code'; python code/evaluation/main.py --pred dataset/sample_output.csv --truth dataset/sample_output.csv --requests dataset/sample_deletion_requests.csv --out code/evaluation/evaluation_report.md
+# Windows (PowerShell):
+$env:PYTHONPATH='code'; python code/main.py --requests dataset/sample_deletion_requests.csv --out scratch/sample_pred.csv
+$env:PYTHONPATH='code'; python code/evaluation/main.py --pred scratch/sample_pred.csv --truth dataset/sample_output.csv --requests dataset/sample_deletion_requests.csv --out code/evaluation/evaluation_report.md
+
+# Linux / macOS:
+PYTHONPATH=code python3 code/main.py --requests dataset/sample_deletion_requests.csv --out scratch/sample_pred.csv
+PYTHONPATH=code python3 code/evaluation/main.py --pred scratch/sample_pred.csv --truth dataset/sample_output.csv --requests dataset/sample_deletion_requests.csv --out code/evaluation/evaluation_report.md
 ```
 
 ---

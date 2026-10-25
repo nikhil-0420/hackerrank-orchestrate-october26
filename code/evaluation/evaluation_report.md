@@ -2,9 +2,9 @@
 
 | Metadata | Value |
 |---|---|
-| **Git Commit** | `5a0f0db80acd3e7deb5e2443956a14552b34e960` |
-| **Command** | `python code/evaluation/main.py --pred dataset/sample_output.csv --truth dataset/sample_output.csv --out code/evaluation/evaluation_report.md` |
-| **Predictions** | `dataset/sample_output.csv` (32 cases) |
+| **Git Commit** | `0b2252d94348825cd875d7b60b4a4fa6970a0016` |
+| **Command** | `python code/evaluation/main.py --pred scratch/sample_pred.csv --truth dataset/sample_output.csv --out code/evaluation/evaluation_report.md` |
+| **Predictions** | `scratch/sample_pred.csv` (32 cases) |
 | **Ground Truth** | `dataset/sample_output.csv` (32 cases) |
 | **Requests Context** | `dataset/sample_deletion_requests.csv` |
 
@@ -13,13 +13,13 @@
 | Metric | Score | Detail / Formula |
 |---|---|---|
 | **Case Status Accuracy** | 1.0000 | 32 / 32 cases correct |
-| **Row Exact-Match Rate** | 1.0000 | 32 / 32 cases identical (status + canonical steps) |
-| **Step Multiset Micro F1** | 1.0000 | Micro P=1.0000, R=1.0000 |
-| **Step Multiset Macro F1** | 1.0000 | Macro P=1.0000, R=1.0000 |
-| **Sequence Exact-Order Rate** | 1.0000 | 32 / 32 exact sequence match |
-| **Sequence Mean LCS Ratio** | 1.0000 | Average 2*LCS/(len_p + len_t) across cases |
-| **Step Alignment Coverage (Truth)** | 1.0000 | 193 / 193 truth steps aligned |
-| **Step Alignment Coverage (Pred)** | 1.0000 | 193 / 193 pred steps aligned |
+| **Row Exact-Match Rate** | 0.9375 | 30 / 32 cases identical (status + canonical steps) |
+| **Step Multiset Micro F1** | 0.9948 | Micro P=1.0000, R=0.9896 |
+| **Step Multiset Macro F1** | 0.9968 | Macro P=1.0000, R=0.9939 |
+| **Sequence Exact-Order Rate** | 0.9375 | 30 / 32 exact sequence match |
+| **Sequence Mean LCS Ratio** | 0.9968 | Average 2*LCS/(len_p + len_t) across cases |
+| **Step Alignment Coverage (Truth)** | 0.9896 | 191 / 193 truth steps aligned |
+| **Step Alignment Coverage (Pred)** | 1.0000 | 191 / 191 pred steps aligned |
 
 ## 2. Status Confusion Matrix
 
@@ -33,20 +33,20 @@
 
 | Field Name | Accuracy | Aligned Steps Evaluated |
 |---|---|---|
-| `phase` | 1.0000 | 193 |
-| `operation` | 1.0000 | 193 |
-| `system_id` | 1.0000 | 193 |
-| `resource_id` | 1.0000 | 193 |
-| `state` | 1.0000 | 193 |
-| `evidence_id` | 1.0000 | 193 |
-| `step_no` | 1.0000 | 193 |
+| `phase` | 1.0000 | 191 |
+| `operation` | 1.0000 | 191 |
+| `system_id` | 1.0000 | 191 |
+| `resource_id` | 1.0000 | 191 |
+| `state` | 1.0000 | 191 |
+| `evidence_id` | 1.0000 | 191 |
+| `step_no` | 0.9791 | 191 |
 
 ## 4. Breakdowns by Truth Status
 
 | Truth Status | Case Count | Status Acc | Row Exact Match | Step Micro F1 | Seq Exact Order |
 |---|---|---|---|---|---|
 | **COMPLETE** | 10 | 1.0000 | 1.0000 | 1.0000 | 1.0000 |
-| **INCOMPLETE** | 22 | 1.0000 | 1.0000 | 1.0000 | 1.0000 |
+| **INCOMPLETE** | 22 | 1.0000 | 0.9091 | 0.9937 | 0.9091 |
 | **NOT_APPLICABLE** | 0 | 0.0000 | 0.0000 | 1.0000 | 0.0000 |
 
 ## 5. Breakdowns by Step Phase
@@ -55,20 +55,21 @@
 |---|---|---|---|---|---|
 | **FINDING** | 41 | 41 | 1.0000 | 1.0000 | 1.0000 |
 | **REMEDIATION** | 41 | 41 | 1.0000 | 1.0000 | 1.0000 |
-| **VERIFICATION** | 111 | 111 | 1.0000 | 1.0000 | 1.0000 |
+| **VERIFICATION** | 111 | 109 | 1.0000 | 0.9820 | 0.9909 |
 
 ## 6. Breakdown by Request Email (Historical vs Current)
 
 | Request Email Type | Case Count | Status Acc | Row Exact Match | Step Micro F1 | Seq Exact Order |
 |---|---|---|---|---|---|
-| **Current Email** | 29 | 1.0000 | 1.0000 | 1.0000 | 1.0000 |
+| **Current Email** | 29 | 1.0000 | 0.9310 | 0.9938 | 0.9310 |
 | **Historical Email Alias** | 3 | 1.0000 | 1.0000 | 1.0000 | 1.0000 |
 
 ## 7. Non-Exact Match Errors Table
 
 | Case ID | Truth Status | Pred Status | First Diff Step | Diagnosis Reason |
 |---|---|---|---|---|
-| (None) | - | - | - | All cases match ground truth exactly (100% exact match). |
+| `case_18` | INCOMPLETE | INCOMPLETE | 11 | Wrong operation: expected VERIFY_RECORD_PRESENT, got VERIFY_RECORD_REDACTED |
+| `case_20` | INCOMPLETE | INCOMPLETE | 7 | Wrong operation: expected VERIFY_RECORD_PRESENT, got VERIFY_DATA_FLOW_DISABLED |
 
 ## 8. Per-Module Error Attribution
 
@@ -77,7 +78,7 @@
 | **`identity`** | 0 | (None) | No errors detected in this module (100% compliant). |
 | **`linkage`** | 0 | (None) | No errors detected in this module (100% compliant). |
 | **`state`** | 0 | (None) | No errors detected in this module (100% compliant). |
-| **`rules`** | 0 | (None) | No errors detected in this module (100% compliant). |
+| **`rules`** | 2 | `case_18`, `case_20` | Wrong operation: expected VERIFY_RECORD_PRESENT, got VERIFY_RECORD_REDACTED; Wrong operation: expected VERIFY_RECORD_PRESENT, got VERIFY_DATA_FLOW_DISABLED |
 | **`emit`** | 0 | (None) | No errors detected in this module (100% compliant). |
 | **`citation`** | 0 | (None) | No errors detected in this module (100% compliant). |
 
@@ -93,7 +94,7 @@
 
 | # | Case Name | Responsible Module | Status | Input Summary | Expected Result | Actual Result |
 |---|---|---|---|---|---|---|
-| 1 | **Historical Email Alias Resolution** | `identity` | **PASS** | Request submitted with historical email alias: o.walker6695@yahoo.com | Resolved via audit log to user_523, case planned (COMPLETE/INCOMPLETE) | Status: INCOMPLETE |
+| 1 | **Historical Email Alias Resolution** | `identity` | **PASS** | Request submitted with historical email alias: o.walker6695@yahoo.com | Resolved via audit log to user_523, case planned (COMPLETE/INCOMPLETE) | Status: COMPLETE |
 | 2 | **Future Evidence Time-gating** | `citation` | **PASS** | audit_at set to 2026-01-01T00:00:00Z; evidence captured later exists in dataset | Files captured after 2026-01-01T00:00:00Z strictly excluded from citations | Cited files: [], future cited: False |
 | 3 | **Similar-Email Decoy Isolation** | `linkage` | **PASS** | Decoy email 'amina.elmasri.jr@gmail.com' similar to subject 'amina.elmasri@gmail.com' | Decoy is unlinked to subject resources (0 steps attributed) | Attributed steps: 0, status: COMPLETE |
 | 4 | **Expired Security Record Retention** | `rules` | **PASS** | Audit record retention_until (2026-06-01) < audit_at (2026-07-01) | Retention expired: record must not be retained (VERIFY_RECORD_ABSENT) | Verification Op: 'VERIFY_RECORD_ABSENT', State: 'ABSENT' |
